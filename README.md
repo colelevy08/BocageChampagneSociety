@@ -26,13 +26,54 @@ Luxury membership and loyalty platform for **Bocage Champagne Bar** (10 Phila St
 
 ## Features
 
-- **Auth** — Email/password login and signup with Bocage branding
-- **Wine Catalog** — Searchable, filterable menu with category tabs and pricing
-- **Membership** — Three-tier system (Flûte / Magnum / Jeroboam) with points, progress bar, and benefits
-- **Events** — Upcoming event listings with tier-gating, seat tracking, and RSVP booking
-- **At Home** — Private champagne experience booking with three service tiers
-- **Profile** — User info, tier badge, sign out
-- **Admin Inventory** — Full wine CRUD with photo uploads, availability toggles, stock tracking
+### Core Pages
+- **Auth** — Login/signup with animated branding, password strength meter, terms acceptance, forgot password flow
+- **Wine Catalog (La Carte)** — Searchable, filterable menu with grid/list view toggle, sort options, debounced search, wine detail modal with full tasting notes
+- **Membership (Society)** — Three-tier system (Flûte/Magnum/Jeroboam) with animated points counter, progress bar with glow effects, tier benefits comparison, point transaction history
+- **Events** — Upcoming event listings with countdown timers, tier-gating, seat urgency bars, RSVP booking with toast feedback, share functionality
+- **At Home** — Private champagne experience booking with three service tiers, expandable feature lists, guest testimonials carousel, FAQ accordion
+- **Profile** — Editable user info (name, phone), membership stats, admin badge, sign out with styled confirmation dialog
+- **Admin Inventory** — Stats dashboard, wine CRUD with search/filters (category + availability), photo uploads, styled modal forms, confirmation dialogs
+
+### UX Improvements
+- **Toast notification system** — Success, error, info, warning variants with auto-dismiss and animations
+- **Skeleton loading** — Content-shaped shimmering placeholders instead of spinners
+- **Pull-to-refresh** — Native-feeling gesture on all data pages
+- **Haptic feedback** — Capacitor Haptics integration on native for taps, success, and error
+- **Offline detection** — Banner overlay when connectivity is lost
+- **Error boundary** — Graceful crash recovery with styled retry screen
+- **Wine detail modal** — Tap any wine for full info, large image, pricing breakdown
+- **Animated tab bar** — Spring-animated active indicator, haptic feedback on tab switch
+- **Scroll restoration** — Auto-scroll to top on navigation
+- **Confirmation dialogs** — Styled modals instead of browser alerts for destructive actions
+- **Debounced search** — Prevents excessive filtering on rapid typing
+
+### Design System Enhancements
+- **Glass morphism** — Standard and elevated glass variants with blur effects
+- **Glow effects** — Subtle gold and rosé glow on featured elements
+- **Hover lift** — Cards lift with shadow on hover/tap
+- **Skeleton shimmer** — Animated gradient placeholders
+- **Gradient text** — Gold and rosé gradient text utilities
+- **Custom focus rings** — Gold focus-visible outlines for accessibility
+- **Selection styling** — Gold-tinted text selection
+
+### Shared UI Components
+- `Button` — Primary, secondary, ghost, danger, gold variants with loading state and icons
+- `Modal` — Slide-up overlay with backdrop blur, escape key, body scroll lock
+- `Toast` — Context-based notifications with 4 variants
+- `Badge` — Color-coded labels (gold, rose, green, red, gray, blue)
+- `Input` — Themed form fields with labels, icons, and error states
+- `EmptyState` — Consistent empty list placeholders with optional actions
+- `PageHeader` — Reusable gradient gold headers with subtitles and actions
+- `Skeleton` — Content-shaped loading placeholders (wine card, event, profile, stat, inventory)
+- `ConfirmDialog` — Styled destructive action confirmations
+- `PasswordStrength` — Visual password strength indicator with color-coded bars
+
+### Custom Hooks
+- `usePullToRefresh` — Touch gesture detection for pull-to-refresh
+- `useHaptics` — Capacitor haptic feedback (light, medium, heavy, success, error, selection)
+- `useDebounce` — Value debouncing for search inputs
+- `useOnlineStatus` — Network connectivity tracking
 
 ---
 
@@ -40,41 +81,59 @@ Luxury membership and loyalty platform for **Bocage Champagne Bar** (10 Phila St
 
 ```
 bocage-champagne-society/
-├── capacitor.config.ts             # Native iOS/Android config
-├── vite.config.js                  # Vite + Tailwind v4 plugin
-├── index.html                      # Root HTML with Google Fonts
-├── package.json                    # Dependencies and scripts
-├── .env.example                    # Supabase credential template
+├── capacitor.config.ts
+├── vite.config.js
+├── index.html
+├── package.json
+├── .env.example
 ├── .gitignore
-├── CLAUDE.md                       # Claude Code project context
-├── CLAUDE_CODE_PROMPT.md           # Full development prompt
-├── README.md                       # This file
+├── CLAUDE.md
+├── CLAUDE_CODE_PROMPT.md
+├── README.md
 ├── public/
-│   └── manifest.json               # PWA manifest
+│   └── manifest.json
 ├── src/
-│   ├── main.jsx                    # Entry — mounts React, calls initializeApp()
-│   ├── App.jsx                     # Root — BrowserRouter > AuthProvider > Routes
-│   ├── index.css                   # Tailwind v4 @theme{} with champagne/noir/rosé tokens
+│   ├── main.jsx
+│   ├── App.jsx
+│   ├── index.css
 │   ├── lib/
-│   │   ├── supabase.js             # Supabase client
-│   │   └── capacitor.js            # Native init (splash, status bar, push)
+│   │   ├── supabase.js
+│   │   └── capacitor.js
+│   ├── hooks/
+│   │   ├── usePullToRefresh.js
+│   │   ├── useHaptics.js
+│   │   ├── useDebounce.js
+│   │   └── useOnlineStatus.js
 │   ├── context/
-│   │   └── AuthContext.jsx          # Global auth state + actions
+│   │   └── AuthContext.jsx
 │   ├── components/
-│   │   └── layout/
-│   │       ├── AppLayout.jsx        # Page wrapper + TabBar + transitions
-│   │       └── TabBar.jsx           # Bottom tab nav with glass morphism
+│   │   ├── ErrorBoundary.jsx
+│   │   ├── WineDetailModal.jsx
+│   │   ├── layout/
+│   │   │   ├── AppLayout.jsx
+│   │   │   └── TabBar.jsx
+│   │   └── ui/
+│   │       ├── Badge.jsx
+│   │       ├── Button.jsx
+│   │       ├── ConfirmDialog.jsx
+│   │       ├── EmptyState.jsx
+│   │       ├── Input.jsx
+│   │       ├── Modal.jsx
+│   │       ├── PageHeader.jsx
+│   │       ├── PasswordStrength.jsx
+│   │       ├── Skeleton.jsx
+│   │       └── Toast.jsx
 │   └── pages/
-│       ├── Auth.jsx                 # Login/signup
-│       ├── Menu.jsx                 # Wine catalog
-│       ├── Membership.jsx           # Tier info + points + progress
-│       ├── Events.jsx               # Event listings + booking
-│       ├── AtHome.jsx               # At-Home experience booking
-│       ├── Profile.jsx              # User settings
-│       └── AdminInventory.jsx       # Admin wine CRUD
+│       ├── Auth.jsx
+│       ├── Menu.jsx
+│       ├── Membership.jsx
+│       ├── Events.jsx
+│       ├── AtHome.jsx
+│       ├── Profile.jsx
+│       └── AdminInventory.jsx
 └── supabase/
     └── migrations/
-        └── 001_initial_schema.sql   # 8 tables, RLS, triggers, seed data
+        └── 001_initial_schema.sql
 ```
 
 ---
@@ -82,7 +141,6 @@ bocage-champagne-society/
 ## Getting Started
 
 ### 1. Clone and install
-
 ```bash
 git clone <repo-url>
 cd bocage-champagne-society
@@ -90,64 +148,36 @@ npm install
 ```
 
 ### 2. Set up Supabase
-
 1. Create a project at [supabase.com](https://supabase.com)
 2. Run `supabase/migrations/001_initial_schema.sql` in the SQL Editor
 3. Create a `wine-images` storage bucket (set to public)
-4. Copy `.env.example` to `.env.local` and fill in your credentials:
-
-```bash
-cp .env.example .env.local
-```
+4. Copy `.env.example` to `.env.local` with your credentials
 
 ### 3. Run locally
-
 ```bash
 npm run dev     # Dev server at localhost:5173
 ```
 
-### 4. Build for production
-
+### 4. Native builds
 ```bash
-npm run build   # Outputs to dist/
-```
-
-### 5. Native builds (Capacitor)
-
-```bash
-npx cap add ios              # First time only
-npx cap add android          # First time only
-npm run cap:build:ios        # Build + sync iOS
-npm run cap:build:android    # Build + sync Android
-npx cap open ios             # Open Xcode
-npx cap open android         # Open Android Studio
+npx cap add ios && npx cap add android   # First time
+npm run cap:build:ios                    # Build + sync iOS
+npm run cap:build:android                # Build + sync Android
 ```
 
 ---
 
 ## Database
 
-8 tables with Row Level Security: `profiles`, `membership_tiers`, `memberships`, `point_transactions`, `wines`, `events`, `event_bookings`, `at_home_bookings`.
+8 tables with RLS: `profiles`, `membership_tiers`, `memberships`, `point_transactions`, `wines`, `events`, `event_bookings`, `at_home_bookings`.
 
-Auto-signup trigger creates a profile and Flûte membership for every new user.
-
-Storage bucket: `wine-images` (public).
-
-See `supabase/migrations/001_initial_schema.sql` for the full schema.
+Auto-signup trigger creates profile + Flûte membership. Storage bucket: `wine-images` (public).
 
 ---
 
 ## Design System
 
-- **Colors:** `champagne-*` (gold), `noir-*` (dark), `rose-*` (pink accent)
-- **Fonts:** Playfair Display (headings), Cormorant Garamond (body), Outfit (UI)
-- **Effects:** `.glass` (glass morphism), `.shimmer-gold` (button shimmer), `.text-gradient-gold`
-- **Aesthetic:** Dark luxury theme, mobile-first, safe area aware
-
----
-
-## App Identity
-
-- **App ID:** `com.bocage.champagnesociety`
-- **App Name:** Bocage Society
-- **Location:** 10 Phila St, Saratoga Springs, NY
+- **Colors:** `champagne-*` (gold), `noir-*` (dark), `rose-*` (pink)
+- **Fonts:** Playfair Display / Cormorant Garamond / Outfit
+- **Effects:** `.glass`, `.glass-elevated`, `.shimmer-gold`, `.text-gradient-gold`, `.glow-gold`, `.hover-lift`, `.skeleton`
+- **Aesthetic:** Dark luxury, mobile-first, safe area aware, glass morphism
