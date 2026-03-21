@@ -246,6 +246,62 @@ add_text_box(slide, 10, 6.5, 2.5, 0.5, "$277,185", 22, GOLD, True, PP_ALIGN.RIGH
 
 
 # ════════════════════════════════════════════════════════════════════════════
+# SLIDE 5b: Infrastructure Costs & Net Profit
+# ════════════════════════════════════════════════════════════════════════════
+slide = prs.slides.add_slide(prs.slide_layouts[6])
+set_slide_bg(slide)
+add_text_box(slide, 0.8, 0.5, 11, 0.8, "Infrastructure & Net Profit", 40, GOLD, True, PP_ALIGN.LEFT, 'Georgia')
+add_gold_line(slide, 0.8, 1.3, 4)
+add_text_box(slide, 0.8, 1.5, 11, 0.5, "Real infrastructure costs on Supabase Pro — lean and scalable:", 14, NOIR_300)
+
+GREEN = RGBColor(0x22, 0xC5, 0x5E)
+
+# Supabase Pro costs breakdown
+costs = [
+    ("Supabase Pro Plan (base)", "Per project/month", "$25/mo", "$300"),
+    ("MAU (100K included free)", "First 100K MAUs included in Pro", "$0.00", "$0"),
+    ("MAU Overage", "Est. 2,000 MAU Year 1 — well under 100K limit", "$0.00", "$0"),
+    ("Database Disk (8 GB included)", "8 GB included, est. ~2 GB used Year 1", "$0.00", "$0"),
+    ("Egress (250 GB included)", "250 GB included, est. ~50 GB used Year 1", "$0.00", "$0"),
+    ("File Storage (100 GB included)", "Wine images + assets, est. ~5 GB", "$0.00", "$0"),
+    ("Daily Backups", "Included — stored for 7 days", "$0.00", "$0"),
+    ("Email Support", "Included with Pro", "$0.00", "$0"),
+    ("Vercel Hosting (web)", "Hobby/Pro plan for web app", "$20/mo", "$240"),
+    ("Apple Developer Account", "iOS App Store distribution", "$99/yr", "$99"),
+    ("Google Play Developer", "Android distribution (one-time)", "$25", "$25"),
+    ("Stripe Payment Processing", "2.9% + $0.30 per transaction (on ~$200K)", "~2.9%", "~$6,200"),
+    ("Domain + SSL", "champagnebar.com — already owned", "$0.00", "$0"),
+]
+
+add_text_box(slide, 1.2, 2.1, 4, 0.35, "Cost Item", 11, GOLD, True)
+add_text_box(slide, 5, 2.1, 4.5, 0.35, "Details", 11, GOLD, True)
+add_text_box(slide, 9.5, 2.1, 1.5, 0.35, "Rate", 11, GOLD, True, PP_ALIGN.RIGHT)
+add_text_box(slide, 11, 2.1, 1.5, 0.35, "Annual", 11, GOLD, True, PP_ALIGN.RIGHT)
+add_gold_line(slide, 1.2, 2.45, 11)
+
+for i, (item, detail, rate, annual) in enumerate(costs):
+    y = 2.55 + i * 0.3
+    color = WHITE if i % 2 == 0 else CREAM
+    add_text_box(slide, 1.2, y, 3.8, 0.28, item, 9, color)
+    add_text_box(slide, 5, y, 4.5, 0.28, detail, 8, NOIR_300)
+    add_text_box(slide, 9.5, y, 1.5, 0.28, rate, 9, NOIR_300, False, PP_ALIGN.RIGHT)
+    add_text_box(slide, 11, y, 1.5, 0.28, annual, 9, color, False, PP_ALIGN.RIGHT)
+
+# Totals
+y_total = 6.55
+add_gold_line(slide, 1.2, y_total - 0.1, 11)
+add_text_box(slide, 1.2, y_total, 4, 0.35, "TOTAL INFRASTRUCTURE COST", 11, WHITE, True)
+add_text_box(slide, 11, y_total, 1.5, 0.35, "~$6,864", 13, RGBColor(0xFF, 0x66, 0x66), True, PP_ALIGN.RIGHT)
+
+add_text_box(slide, 1.2, y_total + 0.4, 4, 0.35, "YEAR 1 GROSS REVENUE", 11, WHITE, True)
+add_text_box(slide, 11, y_total + 0.4, 1.5, 0.35, "$277,185", 13, GOLD, True, PP_ALIGN.RIGHT)
+
+add_gold_line(slide, 1.2, y_total + 0.8, 11)
+add_text_box(slide, 1.2, y_total + 0.85, 5, 0.4, "NET PROFIT (97.5% margin)", 13, WHITE, True)
+add_text_box(slide, 10, y_total + 0.85, 2.5, 0.4, "$270,321", 22, GREEN, True, PP_ALIGN.RIGHT)
+
+
+# ════════════════════════════════════════════════════════════════════════════
 # SLIDE 6: Membership Tiers Deep Dive
 # ════════════════════════════════════════════════════════════════════════════
 slide = prs.slides.add_slide(prs.slide_layouts[6])
