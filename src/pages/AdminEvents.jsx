@@ -1,7 +1,8 @@
 /**
  * @file src/pages/AdminEvents.jsx
  * @description Admin event management page for creating, editing, and managing events.
- * Features event list with status badges, create/edit modal form, and toggle active status.
+ * Features event list with status badges, create/edit modal form, toggle active status,
+ * and drag-and-drop image upload via ImageUpload component to Supabase Storage.
  * @importedBy src/App.jsx (route: /admin/events, guarded by isAdmin)
  * @imports src/lib/supabase.js, src/context/AuthContext.jsx, src/components/ui/*,
  *          framer-motion, lucide-react, date-fns
@@ -10,8 +11,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
-  Plus, CalendarDays, MapPin, Users, Edit3, Eye, EyeOff, Save,
-  Trash2, DollarSign, Image,
+  Plus, CalendarDays, Edit3, Eye, EyeOff, Save, Trash2,
 } from 'lucide-react';
 import { format, isPast } from 'date-fns';
 import { supabase } from '../lib/supabase';
@@ -23,6 +23,7 @@ import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import EmptyState from '../components/ui/EmptyState';
+import ImageUpload from '../components/ui/ImageUpload';
 import { useHaptics } from '../hooks/useHaptics';
 
 const EMPTY_EVENT = {
@@ -232,7 +233,13 @@ export default function AdminEvents() {
             </div>
           </div>
           <input type="text" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} placeholder="Location" className="w-full bg-noir-800 border border-noir-700 rounded-lg px-4 py-2.5 text-white font-sans text-sm placeholder:text-noir-500 focus:outline-none focus:border-champagne-500" />
-          <input type="url" value={form.image_url} onChange={(e) => setForm({ ...form, image_url: e.target.value })} placeholder="Image URL (optional)" className="w-full bg-noir-800 border border-noir-700 rounded-lg px-4 py-2.5 text-white font-sans text-sm placeholder:text-noir-500 focus:outline-none focus:border-champagne-500" />
+          <ImageUpload
+            bucket="event-images"
+            currentUrl={form.image_url}
+            onUpload={(url) => setForm({ ...form, image_url: url })}
+            onRemove={() => setForm({ ...form, image_url: '' })}
+            placeholder="Upload event banner"
+          />
           <div className="grid grid-cols-3 gap-3">
             <input type="number" value={form.max_seats} onChange={(e) => setForm({ ...form, max_seats: e.target.value })} placeholder="Seats" className="bg-noir-800 border border-noir-700 rounded-lg px-3 py-2.5 text-white font-sans text-sm placeholder:text-noir-500 focus:outline-none focus:border-champagne-500" />
             <input type="number" step="0.01" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} placeholder="Price $" className="bg-noir-800 border border-noir-700 rounded-lg px-3 py-2.5 text-white font-sans text-sm placeholder:text-noir-500 focus:outline-none focus:border-champagne-500" />

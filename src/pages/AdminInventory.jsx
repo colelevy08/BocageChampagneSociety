@@ -2,16 +2,17 @@
  * @file src/pages/AdminInventory.jsx
  * @description Admin-only wine inventory management page with search, category filters,
  * stats dashboard, styled modals, confirmation dialogs, toast feedback, and availability toggles.
+ * Uses ImageUpload component for drag-and-drop wine photo uploads to Supabase Storage.
  * @importedBy src/App.jsx (route: /admin/inventory, guarded by isAdmin)
- * @imports src/lib/supabase.js, src/context/AuthContext.jsx, src/components/ui/*,
- *          src/hooks/*, framer-motion, lucide-react
+ * @imports src/lib/supabase.js, src/lib/storage.js, src/context/AuthContext.jsx,
+ *          src/components/ui/*, src/hooks/*, framer-motion, lucide-react
  */
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Plus, X, Upload, Trash2, Edit3, Wine as WineIcon, Eye, EyeOff,
-  Save, Search, BarChart3, Package, Star, TrendingUp, RefreshCw,
+  Plus, Trash2, Edit3, Wine as WineIcon, Eye, EyeOff,
+  Save, Search, Package, Star, TrendingUp,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -22,6 +23,7 @@ import Button from '../components/ui/Button';
 import Modal from '../components/ui/Modal';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import EmptyState from '../components/ui/EmptyState';
+import ImageUpload from '../components/ui/ImageUpload';
 import { InventoryItemSkeleton } from '../components/ui/Skeleton';
 import { useDebounce } from '../hooks/useDebounce';
 import { useHaptics } from '../hooks/useHaptics';
@@ -47,13 +49,12 @@ export default function AdminInventory() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ ...EMPTY_WINE });
-  const [imageFile, setImageFile] = useState(null);
+  const [imageUrl, setImageUrl] = useState(null);
   const [saving, setSaving] = useState(false);
   const [search, setSearch] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterAvailability, setFilterAvailability] = useState('all'); // 'all' | 'available' | 'hidden'
   const [deleteTarget, setDeleteTarget] = useState(null);
-  const fileInputRef = useRef(null);
 
   const debouncedSearch = useDebounce(search, 250);
 
@@ -92,7 +93,7 @@ export default function AdminInventory() {
   function handleAdd() {
     setForm({ ...EMPTY_WINE });
     setEditingId(null);
-    setImageFile(null);
+    setImageUrl(null);
     setShowForm(true);
   }
 
@@ -111,32 +112,13 @@ export default function AdminInventory() {
       is_featured: wine.is_featured,
     });
     setEditingId(wine.id);
-    setImageFile(null);
+    setImageUrl(wine.image_url || null);
     setShowForm(true);
-  }
-
-  async function uploadImage(file) {
-    const ext = file.name.split('.').pop();
-    const path = `${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-    const { error } = await supabase.storage.from('wine-images').upload(path, file, { cacheControl: '3600', upsert: false });
-    if (error) return null;
-    const { data } = supabase.storage.from('wine-images').getPublicUrl(path);
-    return data?.publicUrl || null;
   }
 
   async function handleSave(e) {
     e.preventDefault();
     setSaving(true);
-
-    let imageUrl = null;
-    if (imageFile) {
-      imageUrl = await uploadImage(imageFile);
-      if (!imageUrl) {
-        toast.error('Image upload failed.');
-        setSaving(false);
-        return;
-      }
-    }
 
     const wineData = {
       name: form.name,
@@ -150,7 +132,7 @@ export default function AdminInventory() {
       stock_count: form.stock_count !== '' ? parseInt(form.stock_count, 10) : null,
       is_available: form.is_available,
       is_featured: form.is_featured,
-      ...(imageUrl && { image_url: imageUrl }),
+      image_url: imageUrl || null,
     };
 
     const { error } = editingId
@@ -358,13 +340,13 @@ export default function AdminInventory() {
             <input type="number" step="0.01" value={form.price_bottle} onChange={(e) => setForm({ ...form, price_bottle: e.target.value })} placeholder="Bottle $" className="bg-noir-800 border border-noir-700 rounded-lg px-3 py-2.5 text-white font-sans text-sm placeholder:text-noir-500 focus:outline-none focus:border-champagne-500" />
             <input type="number" value={form.stock_count} onChange={(e) => setForm({ ...form, stock_count: e.target.value })} placeholder="Stock" className="bg-noir-800 border border-noir-700 rounded-lg px-3 py-2.5 text-white font-sans text-sm placeholder:text-noir-500 focus:outline-none focus:border-champagne-500" />
           </div>
-          <div>
-            <input ref={fileInputRef} type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} className="hidden" />
-            <button type="button" onClick={() => fileInputRef.current?.click()} className="flex items-center gap-2 bg-noir-800 border border-noir-700 rounded-lg px-4 py-2.5 text-noir-400 font-sans text-sm hover:border-champagne-600 transition-colors w-full">
-              <Upload size={14} />
-              {imageFile ? imageFile.name : 'Upload bottle photo'}
-            </button>
-          </div>
+          <ImageUpload
+            bucket="wine-images"
+            currentUrl={imageUrl}
+            onUpload={(url) => setImageUrl(url)}
+            onRemove={() => setImageUrl(null)}
+            placeholder="Upload bottle photo"
+          />
           <div className="flex items-center gap-6">
             <label className="flex items-center gap-2 cursor-pointer">
               <input type="checkbox" checked={form.is_available} onChange={(e) => setForm({ ...form, is_available: e.target.checked })} className="accent-champagne-500" />

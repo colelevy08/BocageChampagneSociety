@@ -33,7 +33,8 @@ Luxury membership and loyalty platform for **Bocage Champagne Bar** (10 Phila St
 - **Events** — Upcoming event listings with countdown timers, tier-gating, seat urgency bars, RSVP booking with toast feedback, share functionality
 - **At Home** — Private champagne experience booking with three service tiers, expandable feature lists, guest testimonials carousel, FAQ accordion
 - **Profile** — Editable user info (name, phone), membership stats, admin badge, sign out with styled confirmation dialog
-- **Admin Inventory** — Stats dashboard, wine CRUD with search/filters (category + availability), photo uploads, styled modal forms, confirmation dialogs
+- **Admin Inventory** — Stats dashboard, wine CRUD with search/filters (category + availability), drag-and-drop photo uploads, styled modal forms, confirmation dialogs
+- **Admin Events** — Event CRUD with status badges, drag-and-drop banner image upload, tier-gating, seat management
 
 ### UX Improvements
 - **Toast notification system** — Success, error, info, warning variants with auto-dismiss and animations
@@ -67,6 +68,7 @@ Luxury membership and loyalty platform for **Bocage Champagne Bar** (10 Phila St
 - `PageHeader` — Reusable gradient gold headers with subtitles and actions
 - `Skeleton` — Content-shaped loading placeholders (wine card, event, profile, stat, inventory)
 - `ConfirmDialog` — Styled destructive action confirmations
+- `ImageUpload` — Drag-and-drop image upload with preview, validation, and Supabase Storage integration
 - `PasswordStrength` — Visual password strength indicator with color-coded bars
 
 ### Custom Hooks
@@ -98,6 +100,7 @@ bocage-champagne-society/
 │   ├── index.css
 │   ├── lib/
 │   │   ├── supabase.js
+│   │   ├── storage.js
 │   │   └── capacitor.js
 │   ├── hooks/
 │   │   ├── usePullToRefresh.js
@@ -117,6 +120,7 @@ bocage-champagne-society/
 │   │       ├── Button.jsx
 │   │       ├── ConfirmDialog.jsx
 │   │       ├── EmptyState.jsx
+│   │       ├── ImageUpload.jsx
 │   │       ├── Input.jsx
 │   │       ├── Modal.jsx
 │   │       ├── PageHeader.jsx
@@ -130,10 +134,13 @@ bocage-champagne-society/
 │       ├── Events.jsx
 │       ├── AtHome.jsx
 │       ├── Profile.jsx
-│       └── AdminInventory.jsx
+│       ├── AdminInventory.jsx
+│       └── AdminEvents.jsx
 └── supabase/
     └── migrations/
-        └── 001_initial_schema.sql
+        ├── 001_initial_schema.sql
+        ├── 002_seed_bocage_menu_and_revenue.sql
+        └── 003_storage_buckets.sql
 ```
 
 ---
@@ -150,7 +157,7 @@ npm install
 ### 2. Set up Supabase
 1. Create a project at [supabase.com](https://supabase.com)
 2. Run `supabase/migrations/001_initial_schema.sql` in the SQL Editor
-3. Create a `wine-images` storage bucket (set to public)
+3. Run `supabase/migrations/003_storage_buckets.sql` to create storage buckets (`wine-images`, `event-images`) with RLS policies
 4. Copy `.env.example` to `.env.local` with your credentials
 
 ### 3. Run locally
@@ -171,7 +178,7 @@ npm run cap:build:android                # Build + sync Android
 
 8 tables with RLS: `profiles`, `membership_tiers`, `memberships`, `point_transactions`, `wines`, `events`, `event_bookings`, `at_home_bookings`.
 
-Auto-signup trigger creates profile + Flûte membership. Storage bucket: `wine-images` (public).
+Auto-signup trigger creates profile + Flûte membership. Storage buckets: `wine-images` (public), `event-images` (public). Both have admin-only upload/delete RLS policies.
 
 ---
 
