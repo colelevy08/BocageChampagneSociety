@@ -20,6 +20,7 @@ import Events from './pages/Events';
 import AtHome from './pages/AtHome';
 import Profile from './pages/Profile';
 import AdminInventory from './pages/AdminInventory';
+import GitHubDashboard from './pages/GitHubDashboard';
 import { Wine } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -72,6 +73,7 @@ function AppRoutes() {
         <Route path="/at-home" element={<AtHome />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/admin/inventory" element={<AdminInventory />} />
+        <Route path="/github" element={<GitHubDashboard />} />
       </Route>
     </Routes>
   );
