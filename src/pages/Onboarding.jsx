@@ -18,7 +18,7 @@ const SLIDES = [
     icon: Wine,
     title: 'Welcome to Bocage',
     subtitle: 'Champagne Society',
-    description: 'Your exclusive membership to Saratoga\'s premier champagne bar. Discover rare wines, earn rewards, and experience luxury.',
+    description: 'Your exclusive membership to Saratoga\'s premier champagne bar at 10 Phila Street. Discover rare wines, earn rewards, and experience luxury since 2021.',
     color: 'champagne-500',
     bg: 'bg-champagne-500/5',
   },

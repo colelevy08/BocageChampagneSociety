@@ -20,8 +20,8 @@ import WineDetailModal from '../components/WineDetailModal';
 import { useDebounce } from '../hooks/useDebounce';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
-/** Category filter options */
-const CATEGORIES = ['all', 'champagne', 'sparkling', 'still', 'cocktail'];
+/** Category filter options — matches real Bocage menu sections */
+const CATEGORIES = ['all', 'food', 'champagne', 'sparkling', 'cocktail'];
 
 /** Sort options */
 const SORT_OPTIONS = [

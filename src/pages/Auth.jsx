@@ -18,7 +18,7 @@ import PasswordStrength from '../components/ui/PasswordStrength';
 const TAGLINES = [
   'Champagne Society',
   'Saratoga Springs, NY',
-  'Est. Since Day One',
+  'Established 2021',
 ];
 
 /**
@@ -128,7 +128,8 @@ export default function Auth() {
           <Wine className="text-champagne-500" size={36} />
         </motion.div>
 
-        <h1 className="font-display text-5xl text-gradient-gold mb-3">Bocage</h1>
+        <h1 className="font-display text-5xl text-gradient-gold mb-1">Bocage</h1>
+        <p className="font-sans text-xs text-noir-400 uppercase tracking-[0.3em] mb-3">Champagne Bar</p>
 
         {/* Cycling tagline */}
         <AnimatePresence mode="wait">
