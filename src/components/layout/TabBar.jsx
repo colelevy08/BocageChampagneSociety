@@ -15,6 +15,7 @@ import {
   Sparkles,
   User,
   Package,
+  GitBranch,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useHaptics } from '../../hooks/useHaptics';
@@ -25,6 +26,7 @@ const tabs = [
   { label: 'Society', path: '/membership', icon: Crown },
   { label: 'Events', path: '/events', icon: CalendarDays },
   { label: 'At Home', path: '/at-home', icon: Sparkles },
+  { label: 'GitHub', path: '/github', icon: GitBranch },
   { label: 'Profile', path: '/profile', icon: User },
 ];
 
@@ -40,7 +42,7 @@ export default function TabBar() {
   const location = useLocation();
 
   const visibleTabs = isAdmin
-    ? [...tabs.slice(0, 4), adminTab, tabs[4]]
+    ? [...tabs.slice(0, 4), adminTab, ...tabs.slice(4)]
     : tabs;
 
   return (
