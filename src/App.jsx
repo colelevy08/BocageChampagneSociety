@@ -2,34 +2,41 @@
  * @file src/App.jsx
  * @description Root component for Bocage Champagne Society.
  * Sets up React Router, wraps the app in AuthProvider + ToastProvider + ErrorBoundary,
- * and conditionally renders Auth (no session) or AppLayout (authenticated).
+ * and conditionally renders Auth, Onboarding, or AppLayout based on auth/onboarding state.
  * @importedBy src/main.jsx
  * @imports src/context/AuthContext.jsx, src/components/ui/Toast.jsx,
- *          src/components/ErrorBoundary.jsx, src/components/layout/AppLayout.jsx, src/pages/*.jsx
+ *          src/components/ErrorBoundary.jsx, src/components/layout/AppLayout.jsx,
+ *          src/pages/*.jsx
  */
 
+import { useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './components/ui/Toast';
 import ErrorBoundary from './components/ErrorBoundary';
 import AppLayout from './components/layout/AppLayout';
 import Auth from './pages/Auth';
+import Onboarding, { hasCompletedOnboarding } from './pages/Onboarding';
 import Menu from './pages/Menu';
 import Membership from './pages/Membership';
 import Events from './pages/Events';
 import AtHome from './pages/AtHome';
 import Profile from './pages/Profile';
+import Notifications from './pages/Notifications';
 import AdminInventory from './pages/AdminInventory';
+import AdminEvents from './pages/AdminEvents';
 import { Wine } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 /**
- * AppRoutes — conditionally renders Auth or main app based on auth state.
+ * AppRoutes — conditionally renders Auth, Onboarding, or main app
+ * based on authentication and onboarding state.
  * Shows a branded loading splash while checking session.
  * @returns {JSX.Element}
  */
 function AppRoutes() {
   const { user, loading } = useAuth();
+  const [onboarded, setOnboarded] = useState(hasCompletedOnboarding);
 
   // Branded loading splash
   if (loading) {
@@ -62,7 +69,12 @@ function AppRoutes() {
   // Not authenticated
   if (!user) return <Auth />;
 
-  // Authenticated — main app with routes
+  // Authenticated but not onboarded — show welcome slides
+  if (!onboarded) {
+    return <Onboarding onComplete={() => setOnboarded(true)} />;
+  }
+
+  // Authenticated + onboarded — main app with routes
   return (
     <Routes>
       <Route element={<AppLayout />}>
@@ -71,7 +83,9 @@ function AppRoutes() {
         <Route path="/events" element={<Events />} />
         <Route path="/at-home" element={<AtHome />} />
         <Route path="/profile" element={<Profile />} />
+        <Route path="/notifications" element={<Notifications />} />
         <Route path="/admin/inventory" element={<AdminInventory />} />
+        <Route path="/admin/events" element={<AdminEvents />} />
       </Route>
     </Routes>
   );

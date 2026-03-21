@@ -15,6 +15,7 @@ import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import PageHeader from '../components/ui/PageHeader';
 import Badge from '../components/ui/Badge';
+import MembershipCard from '../components/MembershipCard';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
 /** Tier display config */
@@ -74,7 +75,7 @@ const TIER_CONFIG = {
  * @returns {JSX.Element}
  */
 export default function Membership() {
-  const { membership, tier, user } = useAuth();
+  const { membership, tier, user, profile } = useAuth();
   const [tiers, setTiers] = useState([]);
   const [transactions, setTransactions] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
@@ -128,6 +129,16 @@ export default function Membership() {
       )}
 
       <PageHeader title="Society" subtitle="Your Membership" />
+
+      {/* Digital membership card */}
+      <div className="mb-5">
+        <MembershipCard
+          tierSlug={currentSlug}
+          memberName={profile?.full_name}
+          memberId={user?.id?.slice(0, 16)?.replace(/(.{4})/g, '$1  ')?.trim()}
+          points={points}
+        />
+      </div>
 
       {/* Current tier card */}
       <motion.div
