@@ -1,0 +1,114 @@
+/**
+ * @file src/index.css
+ * @description Global stylesheet for Bocage Champagne Society.
+ * Defines the Tailwind CSS v4 theme with custom champagne/noir/rosé color tokens,
+ * typography (Playfair Display, Cormorant Garamond, Outfit), and utility classes
+ * for glass morphism, gold shimmer, gradient text, and scrollbar hiding.
+ * @importedBy index.html (via Vite), all components via Tailwind utility classes
+ */
+
+@import "tailwindcss";
+
+@theme {
+  /* ── Champagne Gold Scale ── */
+  --color-champagne-50: #FDF8EC;
+  --color-champagne-100: #F9EDCC;
+  --color-champagne-200: #F3DA99;
+  --color-champagne-300: #ECC566;
+  --color-champagne-400: #E0AF4D;
+  --color-champagne-500: #D4A843;
+  --color-champagne-600: #B8892E;
+  --color-champagne-700: #96692A;
+
+  /* ── Noir Dark Scale ── */
+  --color-noir-50: #E8E8E8;
+  --color-noir-100: #C4C4C4;
+  --color-noir-200: #9E9E9E;
+  --color-noir-300: #6B6B6B;
+  --color-noir-400: #444444;
+  --color-noir-500: #2A2A2A;
+  --color-noir-600: #1F1F1F;
+  --color-noir-700: #181818;
+  --color-noir-800: #111111;
+  --color-noir-900: #0A0A0A;
+
+  /* ── Rosé Pink Scale ── */
+  --color-rose-300: #F9A8D4;
+  --color-rose-400: #F472B6;
+  --color-rose-500: #EC4899;
+
+  /* ── Typography ── */
+  --font-display: 'Playfair Display', serif;
+  --font-serif: 'Cormorant Garamond', serif;
+  --font-sans: 'Outfit', sans-serif;
+}
+
+/* ── Gold Gradient Text ── */
+.text-gradient-gold {
+  background: linear-gradient(135deg, #D4A843 0%, #F3DA99 50%, #D4A843 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Glass Morphism ── */
+.glass {
+  background: rgba(17, 17, 17, 0.7);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(212, 168, 67, 0.15);
+}
+
+/* ── Gold Shimmer Button Effect ── */
+.shimmer-gold {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-gold::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(212, 168, 67, 0.3),
+    transparent
+  );
+  animation: shimmer 2.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+/* ── Hide Scrollbar (for horizontal carousels) ── */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Base Styles ── */
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  overscroll-behavior-y: contain;
+}
+
+/* ── Safe Area Padding Utilities ── */
+.safe-top {
+  padding-top: env(safe-area-inset-top);
+}
+
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom);
+}

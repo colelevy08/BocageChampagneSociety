@@ -1,0 +1,10 @@
+{
+  "name": "Bocage Champagne Society",
+  "short_name": "Bocage Society",
+  "description": "Luxury membership & loyalty platform for Bocage Champagne Bar",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0A0A0A",
+  "theme_color": "#D4A843",
+  "icons": []
+}
