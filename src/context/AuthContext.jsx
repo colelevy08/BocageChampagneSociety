@@ -55,7 +55,7 @@ export function AuthProvider({ children }) {
     try {
       // Fetch profile
       const { data: profileData } = await supabase
-        .from('profiles')
+        .from('bocage_profiles')
         .select('*')
         .eq('id', userId)
         .single();
@@ -63,14 +63,14 @@ export function AuthProvider({ children }) {
 
       // Fetch membership with joined tier data
       const { data: membershipData } = await supabase
-        .from('memberships')
-        .select('*, membership_tiers(*)')
+        .from('bocage_memberships')
+        .select('*, bocage_membership_tiers(*)')
         .eq('user_id', userId)
         .single();
 
       if (membershipData) {
         setMembership(membershipData);
-        setTier(membershipData.membership_tiers);
+        setTier(membershipData.bocage_membership_tiers);
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -121,7 +121,7 @@ export function AuthProvider({ children }) {
         const { data: { user: currentUser } } = await supabase.auth.getUser();
         if (currentUser) {
           await supabase
-            .from('profiles')
+            .from('bocage_profiles')
             .update({ push_token: token })
             .eq('id', currentUser.id);
         }

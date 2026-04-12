@@ -71,11 +71,37 @@ npx cap open android         # Open Android Studio
 
 ## Design Tokens
 
-- Brand gold: `champagne-500` (#D4A843)
-- App background: `noir-900` (#0A0A0A)
-- Card surface: `noir-800` (#111111)
+**Colors**
+- Brand gold: `champagne-500` (#D4A843) — bright highlight: `champagne-300` (#F8D97C)
+- App background: `noir-900` (#0C0906) — warm espresso black
+- Card surface: `noir-800` (#120E0A) — warm near-black
+- Silver: `silver-300` (#CCCCD8) polished sterling, `silver-500` (#8E8EA8) mid
+- Cream/Ivory: `cream-300` (#E8DFC0) warm ivory, `cream-500` (#C8B888) aged parchment
 - Rosé accent: `rose-500` (#EC4899)
+
+**Typography**
 - Headings: Playfair Display (`font-display`)
 - Body: Cormorant Garamond (`font-serif`)
 - UI/Buttons: Outfit (`font-sans`)
-- Effects: `.glass`, `.shimmer-gold`, `.text-gradient-gold`, `.no-scrollbar`
+
+**Gradient text utilities**
+- `.text-gradient-gold` — five-stop antique-to-bullion sweep
+- `.text-gradient-silver` — polished sterling chrome sweep
+- `.text-gradient-cream` — warm ivory sweep
+- `.text-gradient-luxe` — gold + silver duotone (most glamorous headings)
+- `.text-gradient-rose` — rosé pink sweep
+
+**Glass / surface utilities**
+- `.glass` — standard warm-black glass with gold border
+- `.glass-elevated` — deeper blur + inset highlight
+- `.glass-gold` — champagne-tinted hero surfaces
+- `.glass-silver` — cool silver-tinted secondary surfaces
+
+**Shimmer / glow / animation utilities**
+- `.shimmer-gold`, `.shimmer-silver` — moving light sweep
+- `.glow-gold`, `.glow-silver`, `.glow-rose` — ambient halo
+- `.border-gradient-gold`, `.border-gradient-silver` — metallic border seam
+- `.divider-gold`, `.divider-silver` — thin gradient rule
+- `.glint` — one-time sweep (new badges, premium indicators)
+- `.bubble-flicker` — champagne bubble pulse
+- `.no-scrollbar`, `.hover-lift`, `.stagger-in`

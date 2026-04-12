@@ -81,9 +81,9 @@ export default function Membership() {
 
   const fetchData = useCallback(async () => {
     const [tiersRes, txRes] = await Promise.all([
-      supabase.from('membership_tiers').select('*').order('sort_order'),
+      supabase.from('bocage_membership_tiers').select('*').order('sort_order'),
       user
-        ? supabase.from('point_transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20)
+        ? supabase.from('bocage_point_transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20)
         : Promise.resolve({ data: [] }),
     ]);
     if (tiersRes.data) setTiers(tiersRes.data);

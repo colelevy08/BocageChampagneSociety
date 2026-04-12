@@ -1,7 +1,7 @@
 /**
  * @file src/components/layout/TabBar.jsx
  * @description Bottom tab navigation bar with glass morphism, animated active indicator,
- * and conditional admin tab. Features smooth icon transitions and haptic feedback.
+ * and conditional admin tabs (Inventory + CRM). Features smooth icon transitions and haptic feedback.
  * @importedBy src/components/layout/AppLayout.jsx
  * @imports react-router-dom, lucide-react, src/context/AuthContext.jsx, src/hooks/useHaptics.js
  */
@@ -15,22 +15,25 @@ import {
   Sparkles,
   User,
   Package,
-  GitBranch,
+  Users,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useHaptics } from '../../hooks/useHaptics';
 
-/** Tab configuration */
+/** Tab configuration — base tabs for all authenticated users */
 const tabs = [
-  { label: 'Menu', path: '/', icon: Wine },
-  { label: 'Society', path: '/membership', icon: Crown },
-  { label: 'Events', path: '/events', icon: CalendarDays },
-  { label: 'At Home', path: '/at-home', icon: Sparkles },
-  { label: 'GitHub', path: '/github', icon: GitBranch },
-  { label: 'Profile', path: '/profile', icon: User },
+  { label: 'Menu',    path: '/',           icon: Wine         },
+  { label: 'Society', path: '/membership', icon: Crown        },
+  { label: 'Events',  path: '/events',     icon: CalendarDays },
+  { label: 'At Home', path: '/at-home',    icon: Sparkles     },
+  { label: 'Profile', path: '/profile',    icon: User         },
 ];
 
-const adminTab = { label: 'Inventory', path: '/admin/inventory', icon: Package };
+/** Admin-only tabs injected before Profile */
+const adminTabs = [
+  { label: 'Inventory', path: '/admin/inventory', icon: Package },
+  { label: 'CRM',       path: '/admin/crm',       icon: Users   },
+];
 
 /**
  * TabBar — fixed bottom navigation with glass morphism and animated active states.
@@ -41,8 +44,9 @@ export default function TabBar() {
   const haptics = useHaptics();
   const location = useLocation();
 
+  // Insert admin tabs before Profile when user is admin
   const visibleTabs = isAdmin
-    ? [...tabs.slice(0, 4), adminTab, ...tabs.slice(4)]
+    ? [...tabs.slice(0, 4), ...adminTabs, ...tabs.slice(4)]
     : tabs;
 
   return (

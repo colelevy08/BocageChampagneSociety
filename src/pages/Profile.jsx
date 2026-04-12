@@ -41,7 +41,7 @@ export default function Profile() {
   async function handleSave() {
     setSaving(true);
     const { error } = await supabase
-      .from('profiles')
+      .from('bocage_profiles')
       .update({
         full_name: editName.trim(),
         phone: editPhone.trim() || null,

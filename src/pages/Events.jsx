@@ -44,9 +44,9 @@ export default function Events() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     const [eventsRes, bookingsRes] = await Promise.all([
-      supabase.from('events').select('*').eq('is_active', true).order('event_date'),
+      supabase.from('bocage_events').select('*').eq('is_active', true).order('event_date'),
       user
-        ? supabase.from('event_bookings').select('event_id').eq('user_id', user.id)
+        ? supabase.from('bocage_event_bookings').select('event_id').eq('user_id', user.id)
         : Promise.resolve({ data: [] }),
     ]);
     if (eventsRes.data) setEvents(eventsRes.data);
@@ -74,7 +74,7 @@ export default function Events() {
       // Decrement seats
       const event = events.find((e) => e.id === eventId);
       if (event?.seats_remaining) {
-        await supabase.from('events')
+        await supabase.from('bocage_events')
           .update({ seats_remaining: event.seats_remaining - 1 })
           .eq('id', eventId);
       }

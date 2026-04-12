@@ -60,7 +60,7 @@ export default function AdminInventory() {
   const fetchWines = useCallback(async () => {
     setLoading(true);
     const { data } = await supabase
-      .from('wines')
+      .from('bocage_wines')
       .select('*')
       .order('created_at', { ascending: false });
     if (data) setWines(data);
@@ -154,8 +154,8 @@ export default function AdminInventory() {
     };
 
     const { error } = editingId
-      ? await supabase.from('wines').update(wineData).eq('id', editingId)
-      : await supabase.from('wines').insert(wineData);
+      ? await supabase.from('bocage_wines').update(wineData).eq('id', editingId)
+      : await supabase.from('bocage_wines').insert(wineData);
 
     if (error) {
       toast.error('Failed to save wine.');
@@ -170,7 +170,7 @@ export default function AdminInventory() {
 
   async function handleDelete() {
     if (!deleteTarget) return;
-    const { error } = await supabase.from('wines').delete().eq('id', deleteTarget);
+    const { error } = await supabase.from('bocage_wines').delete().eq('id', deleteTarget);
     if (error) {
       toast.error('Failed to delete wine.');
     } else {
@@ -181,7 +181,7 @@ export default function AdminInventory() {
   }
 
   async function toggleAvailability(id, current) {
-    await supabase.from('wines').update({ is_available: !current }).eq('id', id);
+    await supabase.from('bocage_wines').update({ is_available: !current }).eq('id', id);
     haptics.light();
     fetchWines();
   }

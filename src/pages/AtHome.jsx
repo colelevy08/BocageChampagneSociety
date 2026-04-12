@@ -130,7 +130,7 @@ export default function AtHome() {
     setSubmitting(true);
     haptics.medium();
 
-    const { error } = await supabase.from('at_home_bookings').insert({
+    const { error } = await supabase.from('bocage_at_home_bookings').insert({
       user_id: user.id,
       service_tier: selectedTier,
       preferred_date: preferredDate,

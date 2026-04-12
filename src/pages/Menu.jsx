@@ -55,7 +55,7 @@ export default function Menu() {
   const fetchWines = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
-      .from('wines')
+      .from('bocage_wines')
       .select('*')
       .eq('is_available', true)
       .order('is_featured', { ascending: false })

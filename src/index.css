@@ -1,9 +1,9 @@
 /**
  * @file src/index.css
  * @description Global stylesheet for Bocage Champagne Society.
- * Defines the Tailwind CSS v4 theme with custom champagne/noir/rosé color tokens,
+ * Defines the Tailwind CSS v4 theme with custom champagne/noir/silver/cream/rosé color tokens,
  * typography (Playfair Display, Cormorant Garamond, Outfit), and utility classes
- * for glass morphism, gold shimmer, gradient text, skeleton loading, pull-to-refresh,
+ * for glass morphism, gold/silver shimmer, gradient text, skeleton loading, pull-to-refresh,
  * scrollbar hiding, and luxury micro-interactions.
  * @importedBy index.html (via Vite), all components via Tailwind utility classes
  */
@@ -12,26 +12,51 @@
 
 @theme {
   /* ── Champagne Gold Scale ── */
-  --color-champagne-50: #FDF8EC;
-  --color-champagne-100: #F9EDCC;
-  --color-champagne-200: #F3DA99;
-  --color-champagne-300: #ECC566;
-  --color-champagne-400: #E0AF4D;
-  --color-champagne-500: #D4A843;
+  /* A full liquid-gold range: deep antique → warm brand gold → bright bullion → near-white glint */
+  --color-champagne-50:  #FFFEF7;
+  --color-champagne-100: #FFF8E1;
+  --color-champagne-200: #FDEDB8;
+  --color-champagne-300: #F8D97C;  /* bright bubbly highlight */
+  --color-champagne-400: #EEC34F;  /* liquid gold */
+  --color-champagne-500: #D4A843;  /* brand gold */
   --color-champagne-600: #B8892E;
-  --color-champagne-700: #96692A;
+  --color-champagne-700: #8A6222;
+  --color-champagne-800: #5C3F13;
+  --color-champagne-900: #2E1E06;
+
+  /* ── Silver Scale ── */
+  /* Cool platinum/sterling tones — pairs with gold for jewellery-box luxury */
+  --color-silver-50:  #FAFAFA;
+  --color-silver-100: #F2F2F6;
+  --color-silver-200: #E4E4EC;
+  --color-silver-300: #CCCCD8;  /* polished sterling */
+  --color-silver-400: #AEAEC0;
+  --color-silver-500: #8E8EA8;  /* mid silver */
+  --color-silver-600: #6C6C88;
+  --color-silver-700: #4A4A60;
+
+  /* ── Cream / Ivory Scale ── */
+  /* Warm parchment tones — for headings, body text, and card surfaces */
+  --color-cream-50:  #FEFDFB;
+  --color-cream-100: #FAF7F0;
+  --color-cream-200: #F3EDD8;
+  --color-cream-300: #E8DFC0;  /* warm ivory */
+  --color-cream-400: #D9CCA4;
+  --color-cream-500: #C8B888;  /* aged parchment */
+  --color-cream-600: #A89660;
 
   /* ── Noir Dark Scale ── */
-  --color-noir-50: #E8E8E8;
-  --color-noir-100: #C4C4C4;
-  --color-noir-200: #9E9E9E;
-  --color-noir-300: #6B6B6B;
-  --color-noir-400: #444444;
-  --color-noir-500: #2A2A2A;
-  --color-noir-600: #1F1F1F;
-  --color-noir-700: #181818;
-  --color-noir-800: #111111;
-  --color-noir-900: #0A0A0A;
+  /* Very slightly amber-warmed — candlelit velvet, not a cold tech UI */
+  --color-noir-50:  #ECEAE8;
+  --color-noir-100: #C8C4C0;
+  --color-noir-200: #A09894;
+  --color-noir-300: #6E6560;
+  --color-noir-400: #48403A;
+  --color-noir-500: #2E2720;
+  --color-noir-600: #221C16;
+  --color-noir-700: #1A1410;
+  --color-noir-800: #120E0A;  /* card surface — warm near-black */
+  --color-noir-900: #0C0906;  /* app background — deep espresso black */
 
   /* ── Rosé Pink Scale ── */
   --color-rose-300: #F9A8D4;
@@ -45,8 +70,27 @@
 }
 
 /* ── Gold Gradient Text ── */
+/* Five-stop sweep: deep antique → brand gold → bright bullion glint → brand gold → antique */
 .text-gradient-gold {
-  background: linear-gradient(135deg, #D4A843 0%, #F3DA99 50%, #D4A843 100%);
+  background: linear-gradient(135deg, #8A6222 0%, #D4A843 25%, #F8D97C 50%, #D4A843 75%, #8A6222 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Silver Gradient Text ── */
+/* Polished sterling: deep silver → bright chrome → white glint → chrome → deep silver */
+.text-gradient-silver {
+  background: linear-gradient(135deg, #6C6C88 0%, #AEAEC0 30%, #F2F2F6 55%, #CCCCD8 75%, #6C6C88 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ── Cream Gradient Text ── */
+/* Warm ivory sweep for secondary headings and decorative labels */
+.text-gradient-cream {
+  background: linear-gradient(135deg, #A89660 0%, #D9CCA4 40%, #FEFDFB 60%, #D9CCA4 80%, #A89660 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -60,24 +104,54 @@
   background-clip: text;
 }
 
+/* ── Gold + Silver Duotone Gradient Text ── */
+/* For the most glamorous headings — alternates gold and silver like jewellery */
+.text-gradient-luxe {
+  background: linear-gradient(120deg, #8A6222 0%, #D4A843 20%, #F8D97C 35%, #CCCCD8 50%, #F8D97C 65%, #D4A843 80%, #8A6222 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
 /* ── Glass Morphism ── */
+/* Warm-black base with gold border seam — sits on noir-900 without flattening into it */
 .glass {
-  background: rgba(17, 17, 17, 0.7);
+  background: rgba(18, 14, 10, 0.72);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(212, 168, 67, 0.15);
+  border: 1px solid rgba(212, 168, 67, 0.22);
 }
 
-/* ── Elevated Glass — stronger blur + subtle shadow ── */
+/* ── Elevated Glass — stronger blur + shadow ── */
 .glass-elevated {
-  background: rgba(17, 17, 17, 0.85);
-  backdrop-filter: blur(30px);
-  -webkit-backdrop-filter: blur(30px);
-  border: 1px solid rgba(212, 168, 67, 0.2);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  background: rgba(22, 17, 12, 0.88);
+  backdrop-filter: blur(32px);
+  -webkit-backdrop-filter: blur(32px);
+  border: 1px solid rgba(248, 217, 124, 0.25);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55), 0 1px 0 rgba(248, 217, 124, 0.08) inset;
 }
 
-/* ── Gold Shimmer Button Effect ── */
+/* ── Gold-Tinted Glass — for hero cards and featured surfaces ── */
+/* Subtle champagne wash that catches light like a gilded frame */
+.glass-gold {
+  background: rgba(30, 20, 6, 0.80);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(248, 217, 124, 0.35);
+  box-shadow: 0 0 40px rgba(212, 168, 67, 0.08), 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+/* ── Silver Glass — for secondary/info surfaces ── */
+.glass-silver {
+  background: rgba(14, 14, 18, 0.78);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(204, 204, 216, 0.2);
+  box-shadow: 0 0 30px rgba(174, 174, 192, 0.06), 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+/* ── Gold Shimmer Effect ── */
+/* Dramatic three-band sweep: warm gold → bright bullion highlight → warm gold */
 .shimmer-gold {
   position: relative;
   overflow: hidden;
@@ -87,21 +161,51 @@
   content: '';
   position: absolute;
   top: 0;
-  left: -100%;
-  width: 100%;
+  left: -150%;
+  width: 80%;
   height: 100%;
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(212, 168, 67, 0.3),
+    rgba(212, 168, 67, 0.25),
+    rgba(248, 217, 124, 0.5),
+    rgba(255, 255, 255, 0.18),
+    rgba(248, 217, 124, 0.5),
+    rgba(212, 168, 67, 0.25),
     transparent
   );
-  animation: shimmer 2.5s infinite;
+  animation: shimmer 2.8s ease-in-out infinite;
+}
+
+/* ── Silver Shimmer Effect ── */
+.shimmer-silver {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-silver::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -150%;
+  width: 80%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(174, 174, 192, 0.2),
+    rgba(242, 242, 246, 0.45),
+    rgba(255, 255, 255, 0.2),
+    rgba(242, 242, 246, 0.45),
+    rgba(174, 174, 192, 0.2),
+    transparent
+  );
+  animation: shimmer 3s ease-in-out infinite;
 }
 
 @keyframes shimmer {
-  0% { left: -100%; }
-  100% { left: 100%; }
+  0%   { left: -150%; }
+  100% { left: 150%; }
 }
 
 /* ── Skeleton Loading Placeholder ── */
@@ -121,16 +225,31 @@
   100% { background-position: -200% 0; }
 }
 
-/* ── Subtle Glow Effects ── */
+/* ── Glow Effects ── */
+/* Layered: tight halo + wide ambient bloom */
 .glow-gold {
-  box-shadow: 0 0 20px rgba(212, 168, 67, 0.15), 0 0 60px rgba(212, 168, 67, 0.05);
+  box-shadow:
+    0 0 12px rgba(248, 217, 124, 0.25),
+    0 0 30px rgba(212, 168, 67, 0.18),
+    0 0 80px rgba(212, 168, 67, 0.07);
+}
+
+.glow-silver {
+  box-shadow:
+    0 0 12px rgba(242, 242, 246, 0.22),
+    0 0 30px rgba(174, 174, 192, 0.15),
+    0 0 70px rgba(142, 142, 168, 0.06);
 }
 
 .glow-rose {
-  box-shadow: 0 0 20px rgba(236, 72, 153, 0.15), 0 0 60px rgba(236, 72, 153, 0.05);
+  box-shadow:
+    0 0 12px rgba(249, 168, 212, 0.22),
+    0 0 30px rgba(236, 72, 153, 0.15),
+    0 0 70px rgba(236, 72, 153, 0.05);
 }
 
-/* ── Animated Gradient Border ── */
+/* ── Gradient Borders ── */
+/* Gold: sweeps from antique corner to bright highlight to antique */
 .border-gradient-gold {
   position: relative;
   border: none !important;
@@ -142,7 +261,26 @@
   inset: 0;
   padding: 1px;
   border-radius: inherit;
-  background: linear-gradient(135deg, rgba(212, 168, 67, 0.4), transparent, rgba(212, 168, 67, 0.2));
+  background: linear-gradient(135deg, rgba(138, 98, 34, 0.6), rgba(248, 217, 124, 0.7), rgba(212, 168, 67, 0.5), rgba(138, 98, 34, 0.4));
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  -webkit-mask-composite: xor;
+  pointer-events: none;
+}
+
+/* Silver: cool metallic border sweep */
+.border-gradient-silver {
+  position: relative;
+  border: none !important;
+}
+
+.border-gradient-silver::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  border-radius: inherit;
+  background: linear-gradient(135deg, rgba(108, 108, 136, 0.5), rgba(242, 242, 246, 0.7), rgba(174, 174, 192, 0.5), rgba(108, 108, 136, 0.3));
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite: exclude;
   -webkit-mask-composite: xor;
@@ -171,8 +309,9 @@
   right: 0;
   width: 8px;
   height: 8px;
-  background: #D4A843;
+  background: radial-gradient(circle, #F8D97C 0%, #D4A843 60%);
   border-radius: 50%;
+  box-shadow: 0 0 6px rgba(248, 217, 124, 0.6);
   animation: pulse-ring 2s ease-in-out infinite;
 }
 
@@ -288,14 +427,64 @@ button, a, input, textarea, select {
 
 /* Custom focus ring for accessibility */
 :focus-visible {
-  outline: 2px solid #D4A843;
+  outline: 2px solid #F8D97C;
   outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(248, 217, 124, 0.15);
 }
 
-/* Selection color */
+/* Selection color — warm gold wash */
 ::selection {
-  background: rgba(212, 168, 67, 0.3);
-  color: white;
+  background: rgba(248, 217, 124, 0.28);
+  color: #FEFDFB;
+}
+
+/* ── Luxe Divider ── */
+/* A thin gradient rule for separating sections with elegance */
+.divider-gold {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(212, 168, 67, 0.5), rgba(248, 217, 124, 0.8), rgba(212, 168, 67, 0.5), transparent);
+}
+
+.divider-silver {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(174, 174, 192, 0.4), rgba(242, 242, 246, 0.7), rgba(174, 174, 192, 0.4), transparent);
+}
+
+/* ── Champagne Bubble Flicker ── */
+/* Subtle opacity pulse — use on decorative bubble / sparkle elements */
+.bubble-flicker {
+  animation: bubble-flicker 3s ease-in-out infinite;
+}
+
+@keyframes bubble-flicker {
+  0%, 100% { opacity: 0.6; transform: scale(1); }
+  50%       { opacity: 1;   transform: scale(1.08); }
+}
+
+/* ── Glint Sweep ── */
+/* One-time glint for "new" badges or premium indicators */
+.glint {
+  position: relative;
+  overflow: hidden;
+}
+
+.glint::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -75%;
+  width: 50%;
+  height: 200%;
+  background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: skewX(-20deg);
+  animation: glint-sweep 4s ease-in-out infinite;
+}
+
+@keyframes glint-sweep {
+  0%, 70% { left: -75%; opacity: 0; }
+  72%      { opacity: 1; }
+  85%      { left: 150%; opacity: 0; }
+  100%     { left: 150%; opacity: 0; }
 }
 
 /* ── Safe Area Padding Utilities ── */
