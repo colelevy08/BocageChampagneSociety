@@ -1,7 +1,9 @@
 /**
  * @file src/pages/Events.jsx
- * @description Events listing page with compact cards, tier-gating, booking
+ * @description Events listing page with compact cards, free/paid filter, booking
  * with toast feedback, skeleton loading, pull-to-refresh, and expandable detail.
+ * Society uses a single membership product, so events are open to all members
+ * (no tier-gating).
  * @importedBy src/App.jsx (route: /events)
  * @imports src/lib/supabase.js, src/context/AuthContext.jsx, src/components/ui/*,
  *          src/hooks/*, framer-motion, lucide-react, date-fns
@@ -9,7 +11,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CalendarDays, MapPin, Users, Lock, Check, Clock, Share2, RefreshCw, Ticket, ChevronDown } from 'lucide-react';
+import { CalendarDays, MapPin, Users, Check, Clock, Share2, RefreshCw, Ticket, ChevronDown } from 'lucide-react';
 import { format, formatDistanceToNow, isPast, differenceInDays } from 'date-fns';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -22,14 +24,12 @@ import { EventCardSkeleton } from '../components/ui/Skeleton';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 import { useHaptics } from '../hooks/useHaptics';
 
-const TIER_ORDER = ['flute', 'magnum', 'jeroboam'];
-
 /**
  * Events page — upcoming events with compact cards, expandable detail, and booking.
  * @returns {JSX.Element}
  */
 export default function Events() {
-  const { user, tier } = useAuth();
+  const { user } = useAuth();
   const toast = useToast();
   const haptics = useHaptics();
   const [events, setEvents] = useState([]);
@@ -38,8 +38,6 @@ export default function Events() {
   const [bookingId, setBookingId] = useState(null);
   const [filter, setFilter] = useState('upcoming');
   const [expandedId, setExpandedId] = useState(null);
-
-  const userTierIndex = TIER_ORDER.indexOf(tier?.slug || 'flute');
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -84,10 +82,6 @@ export default function Events() {
     setBookingId(null);
   }
 
-  function meetsMinTier(minTier) {
-    return userTierIndex >= TIER_ORDER.indexOf(minTier || 'flute');
-  }
-
   async function shareEvent(event) {
     const text = `${event.title} at Bocage — ${format(new Date(event.event_date), 'MMM d, yyyy')}`;
     if (navigator.share) {
@@ -98,7 +92,7 @@ export default function Events() {
   const upcomingEvents = events.filter((e) => !isPast(new Date(e.event_date)));
   const filtered = upcomingEvents.filter((event) => {
     if (filter === 'free') return !event.price || Number(event.price) === 0;
-    if (filter === 'premium') return event.min_tier !== 'flute';
+    if (filter === 'paid') return event.price && Number(event.price) > 0;
     return true;
   });
 
@@ -122,7 +116,7 @@ export default function Events() {
         {[
           { key: 'upcoming', label: 'All' },
           { key: 'free', label: 'Free' },
-          { key: 'premium', label: 'Premium' },
+          { key: 'paid', label: 'Paid' },
         ].map(({ key, label }) => (
           <button
             key={key}
@@ -158,7 +152,6 @@ export default function Events() {
       <div className="space-y-3">
         {filtered.map((event, index) => {
           const isBooked = bookings.includes(event.id);
-          const hasAccess = meetsMinTier(event.min_tier);
           const isFull = event.seats_remaining !== null && event.seats_remaining <= 0;
           const eventDate = new Date(event.event_date);
           const daysUntil = differenceInDays(eventDate, new Date());
@@ -203,11 +196,6 @@ export default function Events() {
                       <div className="flex items-start justify-between gap-2">
                         <h3 className="font-display text-base text-white leading-tight line-clamp-1">{event.title}</h3>
                         <div className="flex items-center gap-1.5 flex-shrink-0">
-                          {event.min_tier !== 'flute' && (
-                            <Badge variant="gold" size="sm">
-                              {event.min_tier?.charAt(0).toUpperCase() + event.min_tier?.slice(1)}+
-                            </Badge>
-                          )}
                           {isSoon && !isPast(eventDate) && (
                             <Badge variant={isToday ? 'red' : 'gray'} size="sm">
                               {isToday ? 'Today' : `${daysUntil}d`}
@@ -299,10 +287,6 @@ export default function Events() {
                         {isBooked ? (
                           <span className="flex items-center gap-1.5 text-sm font-sans text-champagne-500 bg-champagne-500/10 px-3 py-1.5 rounded-lg">
                             <Check size={14} /> Booked
-                          </span>
-                        ) : !hasAccess ? (
-                          <span className="flex items-center gap-1.5 text-sm font-sans text-noir-500 bg-noir-800 px-3 py-1.5 rounded-lg">
-                            <Lock size={14} /> Upgrade
                           </span>
                         ) : isFull ? (
                           <span className="text-sm font-sans text-noir-500 bg-noir-800 px-3 py-1.5 rounded-lg">

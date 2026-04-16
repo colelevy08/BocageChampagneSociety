@@ -1,7 +1,9 @@
 /**
  * @file src/pages/Profile.jsx
- * @description User profile page with editable name/phone, membership stats,
+ * @description User profile page with editable name/phone, member status,
  * account actions, Bocage contact info, and sign out with confirmation dialog.
+ * Society uses a single membership product, so there are no tiers or points
+ * displayed here.
  * @importedBy src/App.jsx (route: /profile)
  * @imports src/context/AuthContext.jsx, src/lib/supabase.js, src/components/ui/*,
  *          src/hooks/*, framer-motion, lucide-react, date-fns
@@ -11,24 +13,23 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   User, Mail, Crown, LogOut, MapPin, Phone, Edit3,
-  Check, X, Shield, Calendar, Sparkles,
+  Check, X, Shield, Calendar,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../components/ui/Toast';
 import PageHeader from '../components/ui/PageHeader';
-import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { useHaptics } from '../hooks/useHaptics';
 
 /**
- * Profile page — user info, editing, stats, contact, and sign out.
+ * Profile page — user info, editing, member status, contact, and sign out.
  * @returns {JSX.Element}
  */
 export default function Profile() {
-  const { user, profile, tier, membership, isAdmin, signOut } = useAuth();
+  const { user, profile, membership, isAdmin, signOut } = useAuth();
   const toast = useToast();
   const haptics = useHaptics();
   const [editing, setEditing] = useState(false);
@@ -166,38 +167,27 @@ export default function Profile() {
           </div>
         )}
 
-        {/* Tier + member since */}
-        <div className="flex items-center gap-3">
-          {tier && (
-            <div className="flex-1 flex items-center gap-2 bg-noir-800 rounded-lg px-3 py-2.5">
-              <Crown className="text-champagne-500" size={16} />
-              <span className="font-sans text-sm text-white">{tier.name}</span>
-              <span className="ml-auto font-sans text-xs text-champagne-400">{tier.points_multiplier}x pts</span>
-            </div>
-          )}
+        {/* Society member status */}
+        <div className="flex items-center gap-2 bg-noir-800 rounded-lg px-3 py-2.5">
+          <Crown className="text-champagne-500" size={16} />
+          <span className="font-sans text-sm text-white">Society Member</span>
+          <span className="ml-auto font-sans text-xs text-champagne-400">Active</span>
         </div>
       </motion.div>
 
-      {/* Quick stats */}
-      <div className="grid grid-cols-3 gap-3 mb-4">
-        {[
-          { icon: Calendar, label: 'Since', value: memberSince.split(' ')[0] || '—' },
-          { icon: Sparkles, label: 'Points', value: (membership?.points || 0).toLocaleString() },
-          { icon: Crown, label: 'Tier', value: tier?.name || 'Flûte' },
-        ].map((stat, i) => (
-          <motion.div
-            key={stat.label}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 + i * 0.05 }}
-            className="glass rounded-xl p-3 text-center"
-          >
-            <stat.icon size={14} className="text-champagne-600 mx-auto mb-1" />
-            <p className="font-display text-base text-white">{stat.value}</p>
-            <p className="font-sans text-xs text-noir-500">{stat.label}</p>
-          </motion.div>
-        ))}
-      </div>
+      {/* Member-since stat */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="glass rounded-xl p-4 mb-4 flex items-center gap-3"
+      >
+        <Calendar size={18} className="text-champagne-600 flex-shrink-0" />
+        <div className="flex-1">
+          <p className="font-sans text-xs text-noir-500 uppercase tracking-wider">Member Since</p>
+          <p className="font-display text-base text-white mt-0.5">{memberSince}</p>
+        </div>
+      </motion.div>
 
       {/* Admin badge */}
       {isAdmin && (

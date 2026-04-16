@@ -42,9 +42,17 @@ Cross-platform mobile app for **Bocage Champagne Bar** (Saratoga Springs, NY). M
 
 ## Database (Supabase PostgreSQL)
 
-8 tables with RLS: `profiles`, `membership_tiers` (Flûte/Magnum/Jeroboam), `memberships`, `point_transactions`, `wines`, `events`, `event_bookings`, `at_home_bookings`. Auto-signup trigger creates profile + Flûte membership. Storage bucket: `wine-images` (public).
+Tables (all `bocage_*` prefixed, all RLS-enabled):
+`bocage_profiles`, `bocage_memberships`, `bocage_wines`, `bocage_events`,
+`bocage_event_bookings`, `bocage_at_home_bookings`, `bocage_site_data`.
 
-Full schema in `supabase/migrations/001_initial_schema.sql`.
+**Single membership product — no tiers, no points.**
+The `bocage_memberships` row exists per-user only to track join date and status.
+Auto-signup trigger (`bocage_handle_new_user`) creates a profile + membership row.
+Storage bucket: `wine-images` (public).
+
+Migration history in `supabase/migrations/` — note that 001 references the original
+tier+points design which was removed in 003.
 
 ## Pages
 
@@ -52,8 +60,8 @@ Full schema in `supabase/migrations/001_initial_schema.sql`.
 |-------|------|-------------|
 | (no auth) | Auth.jsx | Login/signup with Bocage branding |
 | / | Menu.jsx | Wine/champagne catalog with search + filters |
-| /membership | Membership.jsx | Tiers, points balance, progress, benefits |
-| /events | Events.jsx | Event listings + booking with tier-gating |
+| /membership | Membership.jsx | Single-product Society status, member-since, benefits |
+| /events | Events.jsx | Event listings + booking (open to all members) |
 | /at-home | AtHome.jsx | 3-tier At-Home private experience booking |
 | /profile | Profile.jsx | User settings, sign out |
 | /admin/inventory | AdminInventory.jsx | Admin wine CRUD with photo uploads |

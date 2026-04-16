@@ -1,8 +1,13 @@
 /**
  * @file src/context/AuthContext.jsx
  * @description Global authentication context for Bocage Champagne Society.
- * Provides user session, profile data, membership info, admin status,
+ * Provides user session, profile data, single membership row, admin status,
  * and auth actions (signIn, signUp, signOut) to all child components.
+ *
+ * NOTE: Society uses a single membership product (no tiers, no points).
+ * The `bocage_memberships` row exists per-user solely to track join date
+ * and an optional status — there is no tier_id and no points column.
+ *
  * @importedBy src/App.jsx (wraps entire app), src/pages/*.jsx (consume context)
  * @imports src/lib/supabase.js, src/lib/capacitor.js
  */
@@ -16,7 +21,7 @@ const AuthContext = createContext(null);
 
 /**
  * Hook to access auth context values from any component.
- * @returns {{ user, profile, membership, tier, isAdmin, loading, signIn, signUp, signOut }}
+ * @returns {{ user, profile, membership, isAdmin, loading, signIn, signUp, signOut }}
  */
 export function useAuth() {
   const context = useContext(AuthContext);
@@ -27,8 +32,8 @@ export function useAuth() {
 /**
  * AuthProvider wraps the app and manages:
  * - Supabase auth session (user)
- * - Profile data from the profiles table
- * - Membership + tier info from memberships + membership_tiers
+ * - Profile data from the bocage_profiles table
+ * - Membership row from bocage_memberships (single product — joined_at, status)
  * - Admin role detection
  * - Sign in, sign up, sign out functions
  *
@@ -40,14 +45,13 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
   const [membership, setMembership] = useState(null);
-  const [tier, setTier] = useState(null);
   const [loading, setLoading] = useState(true);
 
   /** Whether the current user has the admin role */
   const isAdmin = profile?.role === 'admin';
 
   /**
-   * Fetches the user's profile, membership, and tier data from Supabase.
+   * Fetches the user's profile and membership row from Supabase.
    * Called after auth state changes (login, signup, session restore).
    * @param {string} userId - The authenticated user's UUID
    */
@@ -61,17 +65,13 @@ export function AuthProvider({ children }) {
         .single();
       setProfile(profileData);
 
-      // Fetch membership with joined tier data
+      // Fetch membership row (single product — no tier join, no points)
       const { data: membershipData } = await supabase
         .from('bocage_memberships')
-        .select('*, bocage_membership_tiers(*)')
+        .select('*')
         .eq('user_id', userId)
         .single();
-
-      if (membershipData) {
-        setMembership(membershipData);
-        setTier(membershipData.bocage_membership_tiers);
-      }
+      setMembership(membershipData);
     } catch (error) {
       console.error('Error fetching user data:', error);
     }
@@ -97,7 +97,6 @@ export function AuthProvider({ children }) {
         } else {
           setProfile(null);
           setMembership(null);
-          setTier(null);
         }
       }
     );
@@ -132,7 +131,7 @@ export function AuthProvider({ children }) {
 
   /**
    * Creates a new user account with email and password.
-   * The database trigger auto-creates profile + Flûte membership.
+   * The database trigger auto-creates profile + membership row.
    * @param {string} email
    * @param {string} password
    * @param {string} fullName
@@ -156,14 +155,12 @@ export function AuthProvider({ children }) {
     setUser(null);
     setProfile(null);
     setMembership(null);
-    setTier(null);
   }
 
   const value = {
     user,
     profile,
     membership,
-    tier,
     isAdmin,
     loading,
     signIn,
