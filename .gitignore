@@ -27,3 +27,4 @@ android/
 # Logs
 *.log
 npm-debug.log*
+.vercel

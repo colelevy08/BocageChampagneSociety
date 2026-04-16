@@ -29,10 +29,18 @@ import { useHaptics } from '../hooks/useHaptics';
 const EMPTY_WINE = {
   name: '', producer: '', region: '', vintage: '', category: 'champagne',
   description: '', price_glass: '', price_bottle: '', stock_count: '',
-  is_available: true, is_featured: false,
+  is_available: true, is_featured: false, service_type: 'glass',
 };
 
-const CATEGORIES = ['all', 'champagne', 'sparkling', 'still', 'cocktail'];
+const GLASS_CATEGORIES = ['champagne', 'sparkling', 'still'];
+const BOTTLE_CATEGORIES = ['grower', 'prominent', 'large_format', 'cellar'];
+const ALL_CATEGORIES = ['all', ...GLASS_CATEGORIES, ...BOTTLE_CATEGORIES];
+
+/** Labels for display */
+const CATEGORY_LABELS = {
+  all: 'All', champagne: 'Champagne', sparkling: 'Sparkling', still: 'Still',
+  grower: 'Grower', prominent: 'Houses', large_format: 'Large Format', cellar: 'Cellar',
+};
 
 /**
  * AdminInventory page — CRUD interface with stats, search, filters, and toast feedback.
@@ -109,6 +117,7 @@ export default function AdminInventory() {
       stock_count: wine.stock_count ?? '',
       is_available: wine.is_available,
       is_featured: wine.is_featured,
+      service_type: wine.service_type || 'glass',
     });
     setEditingId(wine.id);
     setImageFile(null);
@@ -150,6 +159,7 @@ export default function AdminInventory() {
       stock_count: form.stock_count !== '' ? parseInt(form.stock_count, 10) : null,
       is_available: form.is_available,
       is_featured: form.is_featured,
+      service_type: form.service_type,
       ...(imageUrl && { image_url: imageUrl }),
     };
 
@@ -244,7 +254,7 @@ export default function AdminInventory() {
 
       {/* Filters */}
       <div className="flex gap-2 mb-4 overflow-x-auto no-scrollbar">
-        {CATEGORIES.map((cat) => (
+        {ALL_CATEGORIES.map((cat) => (
           <button
             key={cat}
             onClick={() => setFilterCategory(cat)}
@@ -252,7 +262,7 @@ export default function AdminInventory() {
               filterCategory === cat ? 'bg-champagne-500 text-noir-900' : 'bg-noir-800 text-noir-400 border border-noir-700'
             }`}
           >
-            {cat.charAt(0).toUpperCase() + cat.slice(1)}
+            {CATEGORY_LABELS[cat] || cat}
           </button>
         ))}
         <div className="w-px bg-noir-700 mx-1" />
@@ -343,13 +353,23 @@ export default function AdminInventory() {
             <input type="text" value={form.producer} onChange={(e) => setForm({ ...form, producer: e.target.value })} placeholder="Producer" className="bg-noir-800 border border-noir-700 rounded-lg px-4 py-2.5 text-white font-sans text-sm placeholder:text-noir-500 focus:outline-none focus:border-champagne-500" />
             <input type="text" value={form.region} onChange={(e) => setForm({ ...form, region: e.target.value })} placeholder="Region" className="bg-noir-800 border border-noir-700 rounded-lg px-4 py-2.5 text-white font-sans text-sm placeholder:text-noir-500 focus:outline-none focus:border-champagne-500" />
           </div>
+          {/* Service type toggle */}
+          <div className="flex bg-noir-800 rounded-lg p-0.5 border border-noir-700">
+            <button type="button" onClick={() => setForm({ ...form, service_type: 'glass', category: 'champagne' })}
+              className={`flex-1 py-2 rounded-md text-xs font-sans font-medium transition-all ${form.service_type === 'glass' ? 'bg-champagne-500 text-noir-900' : 'text-noir-400'}`}>
+              By the Glass
+            </button>
+            <button type="button" onClick={() => setForm({ ...form, service_type: 'bottle', category: 'grower' })}
+              className={`flex-1 py-2 rounded-md text-xs font-sans font-medium transition-all ${form.service_type === 'bottle' ? 'bg-champagne-500 text-noir-900' : 'text-noir-400'}`}>
+              By the Bottle
+            </button>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <input type="number" value={form.vintage} onChange={(e) => setForm({ ...form, vintage: e.target.value })} placeholder="Vintage" className="bg-noir-800 border border-noir-700 rounded-lg px-4 py-2.5 text-white font-sans text-sm placeholder:text-noir-500 focus:outline-none focus:border-champagne-500" />
             <select value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} className="bg-noir-800 border border-noir-700 rounded-lg px-4 py-2.5 text-white font-sans text-sm focus:outline-none focus:border-champagne-500">
-              <option value="champagne">Champagne</option>
-              <option value="sparkling">Sparkling</option>
-              <option value="still">Still</option>
-              <option value="cocktail">Cocktail</option>
+              {(form.service_type === 'bottle' ? BOTTLE_CATEGORIES : GLASS_CATEGORIES).map((cat) => (
+                <option key={cat} value={cat}>{CATEGORY_LABELS[cat]}</option>
+              ))}
             </select>
           </div>
           <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Tasting notes..." rows={2} className="w-full bg-noir-800 border border-noir-700 rounded-lg px-4 py-2.5 text-white font-sans text-sm placeholder:text-noir-500 focus:outline-none focus:border-champagne-500 resize-none" />

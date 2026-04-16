@@ -99,7 +99,7 @@ export default function WineDetailModal({ wine, isOpen, onClose }) {
         {wine.price_glass && (
           <div className="flex-1 text-center">
             <p className="font-display text-2xl text-champagne-500">
-              ${Number(wine.price_glass).toFixed(0)}
+              ${Number(wine.price_glass).toLocaleString()}
             </p>
             <p className="font-sans text-xs text-noir-400 mt-0.5">Per Glass</p>
           </div>
@@ -110,7 +110,7 @@ export default function WineDetailModal({ wine, isOpen, onClose }) {
         {wine.price_bottle && (
           <div className="flex-1 text-center">
             <p className="font-display text-2xl text-champagne-300">
-              ${Number(wine.price_bottle).toFixed(0)}
+              ${Number(wine.price_bottle).toLocaleString()}
             </p>
             <p className="font-sans text-xs text-noir-400 mt-0.5">Per Bottle</p>
           </div>

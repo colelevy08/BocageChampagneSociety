@@ -1,8 +1,8 @@
 /**
  * @file src/pages/Menu.jsx
  * @description Wine and champagne catalog page for Bocage Champagne Society.
- * Features searchable/filterable card grid with category tabs, grid/list view toggle,
- * sort options, skeleton loading, pull-to-refresh, wine detail modal, and debounced search.
+ * Top-level Glass/Bottle tabs with dynamic subcategory filters, search,
+ * sort options, grid/list views, skeleton loading, pull-to-refresh, and wine detail modal.
  * @importedBy src/App.jsx (route: /)
  * @imports src/lib/supabase.js, src/components/ui/*, src/components/WineDetailModal.jsx,
  *          src/hooks/useDebounce.js, src/hooks/usePullToRefresh.js, framer-motion, lucide-react
@@ -10,7 +10,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Star, Wine as WineIcon, Grid3X3, List, X, SlidersHorizontal, ArrowUpDown, RefreshCw } from 'lucide-react';
+import { Search, Star, Wine as WineIcon, Grid3X3, List, X, ArrowUpDown, RefreshCw, GlassWater } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import PageHeader from '../components/ui/PageHeader';
 import EmptyState from '../components/ui/EmptyState';
@@ -20,38 +20,61 @@ import WineDetailModal from '../components/WineDetailModal';
 import { useDebounce } from '../hooks/useDebounce';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
 
-/** Category filter options */
-const CATEGORIES = ['all', 'champagne', 'sparkling', 'still', 'cocktail'];
+/** Subcategory filters per service type */
+const GLASS_SUBCATEGORIES = [
+  { value: 'all', label: 'All' },
+  { value: 'sparkling', label: 'Sparkling' },
+  { value: 'champagne', label: 'Champagne' },
+  { value: 'still', label: 'Still' },
+];
+
+const BOTTLE_SUBCATEGORIES = [
+  { value: 'all', label: 'All' },
+  { value: 'grower', label: 'Grower' },
+  { value: 'prominent', label: 'Houses' },
+  { value: 'large_format', label: 'Large Format' },
+  { value: 'cellar', label: 'Cellar' },
+];
 
 /** Sort options */
 const SORT_OPTIONS = [
   { value: 'featured', label: 'Featured' },
-  { value: 'name-asc', label: 'Name A–Z' },
-  { value: 'name-desc', label: 'Name Z–A' },
+  { value: 'name-asc', label: 'Name A\u2013Z' },
+  { value: 'name-desc', label: 'Name Z\u2013A' },
   { value: 'price-low', label: 'Price: Low' },
   { value: 'price-high', label: 'Price: High' },
-  { value: 'newest', label: 'Newest' },
 ];
 
 /**
- * Menu page — displays the wine/champagne catalog with rich filtering,
- * sorting, view modes, and a detail modal.
+ * Returns the display price for a wine based on the active service type.
+ * @param {object} wine
+ * @param {string} serviceType - 'glass' | 'bottle'
+ * @returns {number}
+ */
+function getPrice(wine, serviceType) {
+  if (serviceType === 'bottle') return Number(wine.price_bottle) || 0;
+  return Number(wine.price_glass) || 0;
+}
+
+/**
+ * Menu page — displays the wine/champagne catalog with Glass/Bottle tabs,
+ * dynamic subcategory filters, sorting, view modes, and a detail modal.
  *
  * @returns {JSX.Element}
  */
 export default function Menu() {
   const [wines, setWines] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [serviceType, setServiceType] = useState('glass');
+  const [subcategory, setSubcategory] = useState('all');
   const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('all');
-  const [viewMode, setViewMode] = useState('list'); // 'list' | 'grid'
+  const [viewMode, setViewMode] = useState('list');
   const [sortBy, setSortBy] = useState('featured');
   const [showSort, setShowSort] = useState(false);
   const [selectedWine, setSelectedWine] = useState(null);
 
   const debouncedSearch = useDebounce(search, 250);
 
-  // Pull-to-refresh support
   const fetchWines = useCallback(async () => {
     setLoading(true);
     const { data, error } = await supabase
@@ -68,30 +91,39 @@ export default function Menu() {
 
   useEffect(() => { fetchWines(); }, [fetchWines]);
 
+  const subcategories = serviceType === 'glass' ? GLASS_SUBCATEGORIES : BOTTLE_SUBCATEGORIES;
+
   // Filter + sort wines
   const processed = wines
     .filter((wine) => {
+      if (wine.service_type !== serviceType) return false;
       const q = debouncedSearch.toLowerCase();
       const matchesSearch = !q ||
         wine.name.toLowerCase().includes(q) ||
         wine.producer?.toLowerCase().includes(q) ||
         wine.region?.toLowerCase().includes(q) ||
         wine.description?.toLowerCase().includes(q);
-      const matchesCategory = category === 'all' || wine.category === category;
-      return matchesSearch && matchesCategory;
+      const matchesSub = subcategory === 'all' || wine.category === subcategory;
+      return matchesSearch && matchesSub;
     })
     .sort((a, b) => {
       switch (sortBy) {
         case 'name-asc': return a.name.localeCompare(b.name);
         case 'name-desc': return b.name.localeCompare(a.name);
-        case 'price-low': return (a.price_glass || 0) - (b.price_glass || 0);
-        case 'price-high': return (b.price_glass || 0) - (a.price_glass || 0);
-        case 'newest': return new Date(b.created_at) - new Date(a.created_at);
+        case 'price-low': return getPrice(a, serviceType) - getPrice(b, serviceType);
+        case 'price-high': return getPrice(b, serviceType) - getPrice(a, serviceType);
         default: return (b.is_featured ? 1 : 0) - (a.is_featured ? 1 : 0);
       }
     });
 
-  const featuredCount = wines.filter((w) => w.is_featured).length;
+  const serviceCount = wines.filter((w) => w.service_type === serviceType).length;
+
+  /** Switch service type and reset subcategory */
+  function switchService(type) {
+    setServiceType(type);
+    setSubcategory('all');
+    setSearch('');
+  }
 
   return (
     <div className="px-4 pt-6 pb-4">
@@ -108,8 +140,34 @@ export default function Menu() {
 
       <PageHeader
         title="La Carte"
-        subtitle={`${wines.length} wines & champagnes`}
+        subtitle={`${serviceCount} selections`}
       />
+
+      {/* Glass / Bottle toggle */}
+      <div className="flex bg-noir-800 rounded-xl p-1 mb-4 border border-noir-700">
+        <button
+          onClick={() => switchService('glass')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-sans text-sm font-medium transition-all ${
+            serviceType === 'glass'
+              ? 'bg-champagne-500 text-noir-900 shadow-md shadow-champagne-500/20'
+              : 'text-noir-400 hover:text-white'
+          }`}
+        >
+          <GlassWater size={16} />
+          By the Glass
+        </button>
+        <button
+          onClick={() => switchService('bottle')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg font-sans text-sm font-medium transition-all ${
+            serviceType === 'bottle'
+              ? 'bg-champagne-500 text-noir-900 shadow-md shadow-champagne-500/20'
+              : 'text-noir-400 hover:text-white'
+          }`}
+        >
+          <WineIcon size={16} />
+          By the Bottle
+        </button>
+      </div>
 
       {/* Search bar */}
       <div className="relative mb-4">
@@ -121,7 +179,6 @@ export default function Menu() {
           placeholder="Search wines, producers, regions..."
           className="w-full bg-noir-800 border border-noir-700 rounded-xl pl-10 pr-10 py-3 text-white font-sans text-sm placeholder:text-noir-500 focus:outline-none focus:border-champagne-600 transition-colors"
         />
-        {/* Clear search button */}
         {search && (
           <button
             onClick={() => setSearch('')}
@@ -132,21 +189,21 @@ export default function Menu() {
         )}
       </div>
 
-      {/* Controls row: categories + view/sort toggles */}
+      {/* Subcategory filter chips */}
       <div className="flex items-center gap-2 mb-2">
         <div className="flex-1 overflow-x-auto no-scrollbar">
           <div className="flex gap-2">
-            {CATEGORIES.map((cat) => (
+            {subcategories.map((sub) => (
               <button
-                key={cat}
-                onClick={() => setCategory(cat)}
+                key={sub.value}
+                onClick={() => setSubcategory(sub.value)}
                 className={`px-4 py-1.5 rounded-full text-sm font-sans whitespace-nowrap transition-all ${
-                  category === cat
+                  subcategory === sub.value
                     ? 'bg-champagne-500 text-noir-900 font-medium shadow-md shadow-champagne-500/20'
                     : 'bg-noir-800 text-noir-300 border border-noir-700 hover:border-noir-500'
                 }`}
               >
-                {cat.charAt(0).toUpperCase() + cat.slice(1)}
+                {sub.label}
               </button>
             ))}
           </div>
@@ -157,7 +214,7 @@ export default function Menu() {
       <div className="flex items-center justify-between mb-4">
         <p className="text-xs font-sans text-noir-500">
           {processed.length} result{processed.length !== 1 ? 's' : ''}
-          {category !== 'all' && ` in ${category}`}
+          {subcategory !== 'all' && ` in ${subcategories.find((s) => s.value === subcategory)?.label}`}
         </p>
         <div className="flex items-center gap-1">
           <button
@@ -218,7 +275,7 @@ export default function Menu() {
           description={search ? 'Try adjusting your search or filters' : 'Check back soon for new additions'}
           action={search && (
             <button
-              onClick={() => { setSearch(''); setCategory('all'); }}
+              onClick={() => { setSearch(''); setSubcategory('all'); }}
               className="text-champagne-500 font-sans text-sm underline"
             >
               Clear filters
@@ -252,7 +309,7 @@ export default function Menu() {
                     <div className="min-w-0">
                       <h3 className="font-display text-base text-white leading-tight truncate">{wine.name}</h3>
                       <p className="font-sans text-xs text-noir-400 mt-0.5 truncate">
-                        {[wine.producer, wine.region, wine.vintage].filter(Boolean).join(' · ')}
+                        {[wine.producer, wine.region, wine.vintage].filter(Boolean).join(' \u00b7 ')}
                       </p>
                     </div>
                     {wine.is_featured && (
@@ -270,7 +327,7 @@ export default function Menu() {
                     )}
                     {wine.price_bottle && (
                       <span className="text-champagne-300 font-sans text-sm font-medium">
-                        ${Number(wine.price_bottle).toFixed(0)} <span className="text-noir-500 text-xs">bottle</span>
+                        ${Number(wine.price_bottle).toLocaleString()} <span className="text-noir-500 text-xs">bottle</span>
                       </span>
                     )}
                   </div>
@@ -306,11 +363,15 @@ export default function Menu() {
                   {wine.producer || wine.region || wine.category}
                 </p>
                 <div className="flex items-center justify-between mt-1.5">
-                  {wine.price_glass && (
+                  {wine.price_glass ? (
                     <span className="text-champagne-500 font-sans text-xs font-medium">
                       ${Number(wine.price_glass).toFixed(0)}
                     </span>
-                  )}
+                  ) : wine.price_bottle ? (
+                    <span className="text-champagne-300 font-sans text-xs font-medium">
+                      ${Number(wine.price_bottle).toLocaleString()}
+                    </span>
+                  ) : null}
                   {wine.is_featured && <Star className="text-champagne-500" size={10} fill="currentColor" />}
                 </div>
               </div>
