@@ -79,14 +79,33 @@ export function AuthProvider({ children }) {
 
   // Listen for auth state changes and restore session on mount
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      if (session?.user) {
-        fetchUserData(session.user.id);
-      }
-      setLoading(false);
-    });
+    let cancelled = false;
+
+    // Safety failsafe — never let the loading splash stick longer than 4s.
+    // If getSession() ever hangs (network stall, broken localStorage, etc.)
+    // we still drop into Auth.jsx instead of showing the rocking-glass forever.
+    const failsafe = setTimeout(() => {
+      if (!cancelled) setLoading(false);
+    }, 4000);
+
+    // Get initial session — handle resolution, rejection, and always clear loading.
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        if (cancelled) return;
+        setUser(session?.user ?? null);
+        if (session?.user) {
+          fetchUserData(session.user.id);
+        }
+      })
+      .catch((err) => {
+        // eslint-disable-next-line no-console
+        console.error('Failed to restore Supabase session:', err);
+      })
+      .finally(() => {
+        if (cancelled) return;
+        clearTimeout(failsafe);
+        setLoading(false);
+      });
 
     // Subscribe to auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
@@ -101,7 +120,11 @@ export function AuthProvider({ children }) {
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      cancelled = true;
+      clearTimeout(failsafe);
+      subscription.unsubscribe();
+    };
   }, []);
 
   /**

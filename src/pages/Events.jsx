@@ -61,7 +61,7 @@ export default function Events() {
     haptics.medium();
 
     const { error } = await supabase
-      .from('event_bookings')
+      .from('bocage_event_bookings')
       .insert({ user_id: user.id, event_id: eventId });
 
     if (error) {
