@@ -1,16 +1,15 @@
 /**
  * @file src/pages/Events.jsx
- * @description Events listing page with tier-gating, countdown timers,
- * seat tracking, booking with toast feedback, skeleton loading,
- * pull-to-refresh, and share functionality.
+ * @description Events listing page with compact cards, tier-gating, booking
+ * with toast feedback, skeleton loading, pull-to-refresh, and expandable detail.
  * @importedBy src/App.jsx (route: /events)
  * @imports src/lib/supabase.js, src/context/AuthContext.jsx, src/components/ui/*,
  *          src/hooks/*, framer-motion, lucide-react, date-fns
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import { motion } from 'framer-motion';
-import { CalendarDays, MapPin, Users, Lock, Check, Clock, Share2, RefreshCw, Ticket } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { CalendarDays, MapPin, Users, Lock, Check, Clock, Share2, RefreshCw, Ticket, ChevronDown } from 'lucide-react';
 import { format, formatDistanceToNow, isPast, differenceInDays } from 'date-fns';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -26,7 +25,7 @@ import { useHaptics } from '../hooks/useHaptics';
 const TIER_ORDER = ['flute', 'magnum', 'jeroboam'];
 
 /**
- * Events page — upcoming events with booking, tier-gating, countdowns, and sharing.
+ * Events page — upcoming events with compact cards, expandable detail, and booking.
  * @returns {JSX.Element}
  */
 export default function Events() {
@@ -37,7 +36,8 @@ export default function Events() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [bookingId, setBookingId] = useState(null);
-  const [filter, setFilter] = useState('upcoming'); // 'upcoming' | 'free' | 'premium'
+  const [filter, setFilter] = useState('upcoming');
+  const [expandedId, setExpandedId] = useState(null);
 
   const userTierIndex = TIER_ORDER.indexOf(tier?.slug || 'flute');
 
@@ -57,7 +57,6 @@ export default function Events() {
   const { isRefreshing, pullDistance } = usePullToRefresh(fetchData);
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  /** Books the user into an event with toast feedback */
   async function handleBook(eventId) {
     if (!user) return;
     setBookingId(eventId);
@@ -71,7 +70,6 @@ export default function Events() {
       toast.error('Booking failed. Please try again.');
       haptics.error();
     } else {
-      // Decrement seats
       const event = events.find((e) => e.id === eventId);
       if (event?.seats_remaining) {
         await supabase.from('bocage_events')
@@ -86,12 +84,10 @@ export default function Events() {
     setBookingId(null);
   }
 
-  /** Checks if user meets tier requirement */
   function meetsMinTier(minTier) {
     return userTierIndex >= TIER_ORDER.indexOf(minTier || 'flute');
   }
 
-  /** Shares an event using the Web Share API */
   async function shareEvent(event) {
     const text = `${event.title} at Bocage — ${format(new Date(event.event_date), 'MMM d, yyyy')}`;
     if (navigator.share) {
@@ -99,7 +95,6 @@ export default function Events() {
     }
   }
 
-  // Filter events
   const upcomingEvents = events.filter((e) => !isPast(new Date(e.event_date)));
   const filtered = upcomingEvents.filter((event) => {
     if (filter === 'free') return !event.price || Number(event.price) === 0;
@@ -145,7 +140,7 @@ export default function Events() {
 
       {/* Loading skeletons */}
       {loading && (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {[...Array(3)].map((_, i) => <EventCardSkeleton key={i} />)}
         </div>
       )}
@@ -159,8 +154,8 @@ export default function Events() {
         />
       )}
 
-      {/* Event cards */}
-      <div className="space-y-4">
+      {/* Compact event cards */}
+      <div className="space-y-3">
         {filtered.map((event, index) => {
           const isBooked = bookings.includes(event.id);
           const hasAccess = meetsMinTier(event.min_tier);
@@ -169,138 +164,166 @@ export default function Events() {
           const daysUntil = differenceInDays(eventDate, new Date());
           const isToday = daysUntil === 0;
           const isSoon = daysUntil <= 3;
+          const isExpanded = expandedId === event.id;
 
           return (
             <motion.div
               key={event.id}
-              initial={{ opacity: 0, y: 16 }}
+              initial={{ opacity: 0, y: 12 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.08 }}
-              className="glass rounded-2xl overflow-hidden hover-lift"
+              transition={{ delay: index * 0.05 }}
+              className="glass rounded-2xl overflow-hidden"
             >
-              {/* Event image with overlay */}
-              {event.image_url && (
-                <div className="relative">
-                  <img src={event.image_url} alt={event.title} className="w-full h-44 object-cover" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-noir-900/80 via-transparent to-transparent" />
-                  {/* Countdown badge */}
-                  {isSoon && !isPast(eventDate) && (
-                    <div className="absolute top-3 right-3">
-                      <Badge variant={isToday ? 'red' : 'gold'} dot>
-                        {isToday ? 'Today' : `${daysUntil}d left`}
-                      </Badge>
-                    </div>
-                  )}
-                  {/* Booked indicator */}
-                  {isBooked && (
-                    <div className="absolute top-3 left-3">
-                      <Badge variant="green" dot>Booked</Badge>
-                    </div>
-                  )}
-                </div>
-              )}
-
-              <div className="p-4">
-                {/* Title + tier badge */}
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <h3 className="font-display text-lg text-white leading-tight">{event.title}</h3>
-                  {event.min_tier !== 'flute' && (
-                    <Badge variant="gold">
-                      {event.min_tier?.charAt(0).toUpperCase() + event.min_tier?.slice(1)}+
-                    </Badge>
-                  )}
-                </div>
-
-                {event.description && (
-                  <p className="font-serif text-sm text-noir-300 mb-3 line-clamp-2">{event.description}</p>
-                )}
-
-                {/* Meta info with icons */}
-                <div className="space-y-1.5 mb-4">
-                  <div className="flex items-center gap-2 text-xs font-sans text-noir-400">
-                    <CalendarDays size={14} className="text-champagne-600" />
-                    <span>{format(eventDate, 'EEEE, MMM d · h:mm a')}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs font-sans text-noir-400">
-                    <MapPin size={14} className="text-champagne-600" />
-                    <span>{event.location || 'Bocage Champagne Bar'}</span>
-                  </div>
-                  {event.seats_remaining !== null && (
-                    <div className="flex items-center gap-2 text-xs font-sans text-noir-400">
-                      <Users size={14} className="text-champagne-600" />
-                      <span>
-                        {event.seats_remaining > 0
-                          ? `${event.seats_remaining} of ${event.max_seats || '—'} seats left`
-                          : 'Sold out'}
-                      </span>
-                      {/* Seat urgency bar */}
-                      {event.max_seats && event.seats_remaining > 0 && (
-                        <div className="flex-1 h-1.5 bg-noir-700 rounded-full ml-1">
-                          <div
-                            className={`h-full rounded-full ${event.seats_remaining <= 5 ? 'bg-rose-500' : 'bg-champagne-500'}`}
-                            style={{ width: `${(event.seats_remaining / event.max_seats) * 100}%` }}
-                          />
+              {/* Compact card — tap to expand */}
+              <button
+                onClick={() => setExpandedId(isExpanded ? null : event.id)}
+                className="w-full text-left"
+              >
+                <div className="flex">
+                  {/* Thumbnail or date block */}
+                  {event.image_url ? (
+                    <div className="relative w-24 h-24 flex-shrink-0">
+                      <img src={event.image_url} alt={event.title} className="w-full h-full object-cover" />
+                      {isBooked && (
+                        <div className="absolute top-1.5 left-1.5">
+                          <Check size={14} className="text-emerald-400 bg-noir-900/70 rounded-full p-0.5" />
                         </div>
                       )}
                     </div>
-                  )}
-                  {/* Countdown */}
-                  {!isPast(eventDate) && (
-                    <div className="flex items-center gap-2 text-xs font-sans text-champagne-400">
-                      <Clock size={14} />
-                      <span>{formatDistanceToNow(eventDate, { addSuffix: true })}</span>
+                  ) : (
+                    <div className="w-24 h-24 bg-noir-700 flex flex-col items-center justify-center flex-shrink-0">
+                      <span className="font-display text-2xl text-champagne-500">{format(eventDate, 'd')}</span>
+                      <span className="font-sans text-xs text-noir-400 uppercase">{format(eventDate, 'MMM')}</span>
                     </div>
                   )}
-                </div>
 
-                {/* Action row */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    {event.price ? (
-                      <span className="font-display text-xl text-champagne-500">
-                        ${Number(event.price).toFixed(0)}
-                      </span>
-                    ) : (
-                      <Badge variant="green">Free</Badge>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {/* Share button */}
-                    <button
-                      onClick={() => shareEvent(event)}
-                      className="p-2 text-noir-400 hover:text-champagne-500 transition-colors"
-                    >
-                      <Share2 size={16} />
-                    </button>
-
-                    {/* Action button */}
-                    {isBooked ? (
-                      <span className="flex items-center gap-1.5 text-sm font-sans text-champagne-500 bg-champagne-500/10 px-3 py-2 rounded-lg">
-                        <Check size={14} /> Booked
-                      </span>
-                    ) : !hasAccess ? (
-                      <span className="flex items-center gap-1.5 text-sm font-sans text-noir-500 bg-noir-800 px-3 py-2 rounded-lg">
-                        <Lock size={14} /> Upgrade
-                      </span>
-                    ) : isFull ? (
-                      <span className="text-sm font-sans text-noir-500 bg-noir-800 px-3 py-2 rounded-lg">
-                        Sold Out
-                      </span>
-                    ) : (
-                      <Button
-                        variant="primary"
-                        size="md"
-                        loading={bookingId === event.id}
-                        icon={<Ticket size={14} />}
-                        onClick={() => handleBook(event.id)}
-                      >
-                        RSVP
-                      </Button>
-                    )}
+                  {/* Info */}
+                  <div className="flex-1 p-3 min-w-0 flex flex-col justify-between">
+                    <div>
+                      <div className="flex items-start justify-between gap-2">
+                        <h3 className="font-display text-base text-white leading-tight line-clamp-1">{event.title}</h3>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          {event.min_tier !== 'flute' && (
+                            <Badge variant="gold" size="sm">
+                              {event.min_tier?.charAt(0).toUpperCase() + event.min_tier?.slice(1)}+
+                            </Badge>
+                          )}
+                          {isSoon && !isPast(eventDate) && (
+                            <Badge variant={isToday ? 'red' : 'gray'} size="sm">
+                              {isToday ? 'Today' : `${daysUntil}d`}
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                      <p className="font-sans text-xs text-noir-400 mt-0.5">
+                        {format(eventDate, 'EEE, MMM d · h:mm a')}
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-between mt-1.5">
+                      <div className="flex items-center gap-2">
+                        {event.price ? (
+                          <span className="font-display text-lg text-champagne-500">
+                            ${Number(event.price).toFixed(0)}
+                          </span>
+                        ) : (
+                          <Badge variant="green" size="sm">Free</Badge>
+                        )}
+                        {event.seats_remaining !== null && event.seats_remaining > 0 && event.seats_remaining <= 10 && (
+                          <span className="font-sans text-xs text-rose-400">{event.seats_remaining} left</span>
+                        )}
+                      </div>
+                      <ChevronDown
+                        size={14}
+                        className={`text-noir-500 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
+              </button>
+
+              {/* Expanded detail */}
+              <AnimatePresence>
+                {isExpanded && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: 'auto', opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-4 pb-4 pt-1 border-t border-noir-700/50">
+                      {event.description && (
+                        <p className="font-serif text-sm text-noir-300 mb-3">{event.description}</p>
+                      )}
+
+                      <div className="space-y-1.5 mb-3">
+                        <div className="flex items-center gap-2 text-xs font-sans text-noir-400">
+                          <MapPin size={13} className="text-champagne-600" />
+                          <span>{event.location || 'Bocage Champagne Bar'}</span>
+                        </div>
+                        {event.seats_remaining !== null && (
+                          <div className="flex items-center gap-2 text-xs font-sans text-noir-400">
+                            <Users size={13} className="text-champagne-600" />
+                            <span>
+                              {event.seats_remaining > 0
+                                ? `${event.seats_remaining} of ${event.max_seats || '—'} seats left`
+                                : 'Sold out'}
+                            </span>
+                            {event.max_seats && event.seats_remaining > 0 && (
+                              <div className="flex-1 h-1 bg-noir-700 rounded-full ml-1">
+                                <div
+                                  className={`h-full rounded-full ${event.seats_remaining <= 5 ? 'bg-rose-500' : 'bg-champagne-500'}`}
+                                  style={{ width: `${(event.seats_remaining / event.max_seats) * 100}%` }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        {!isPast(eventDate) && (
+                          <div className="flex items-center gap-2 text-xs font-sans text-champagne-400">
+                            <Clock size={13} />
+                            <span>{formatDistanceToNow(eventDate, { addSuffix: true })}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Action row */}
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); shareEvent(event); }}
+                          className="p-2 text-noir-400 hover:text-champagne-500 transition-colors"
+                        >
+                          <Share2 size={15} />
+                        </button>
+
+                        {isBooked ? (
+                          <span className="flex items-center gap-1.5 text-sm font-sans text-champagne-500 bg-champagne-500/10 px-3 py-1.5 rounded-lg">
+                            <Check size={14} /> Booked
+                          </span>
+                        ) : !hasAccess ? (
+                          <span className="flex items-center gap-1.5 text-sm font-sans text-noir-500 bg-noir-800 px-3 py-1.5 rounded-lg">
+                            <Lock size={14} /> Upgrade
+                          </span>
+                        ) : isFull ? (
+                          <span className="text-sm font-sans text-noir-500 bg-noir-800 px-3 py-1.5 rounded-lg">
+                            Sold Out
+                          </span>
+                        ) : (
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            loading={bookingId === event.id}
+                            icon={<Ticket size={14} />}
+                            onClick={(e) => { e.stopPropagation(); handleBook(event.id); }}
+                          >
+                            RSVP
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </motion.div>
           );
         })}
