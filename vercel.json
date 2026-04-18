@@ -2,5 +2,13 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+  "redirects": [
+    { "source": "/", "destination": "/society/", "permanent": false }
+  ],
+  "rewrites": [
+    { "source": "/society/assets/:path*", "destination": "/assets/:path*" },
+    { "source": "/society/manifest.json", "destination": "/manifest.json" },
+    { "source": "/society/(.*)", "destination": "/index.html" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }

@@ -15,7 +15,6 @@ import ErrorBoundary from './components/ErrorBoundary';
 import AppLayout from './components/layout/AppLayout';
 import Auth from './pages/Auth';
 import Menu from './pages/Menu';
-import Membership from './pages/Membership';
 import Events from './pages/Events';
 import AtHome from './pages/AtHome';
 import Profile from './pages/Profile';
@@ -68,7 +67,6 @@ function AppRoutes() {
     <Routes>
       <Route element={<AppLayout />}>
         <Route path="/" element={<Menu />} />
-        <Route path="/membership" element={<Membership />} />
         <Route path="/events" element={<Events />} />
         <Route path="/at-home" element={<AtHome />} />
         <Route path="/profile" element={<Profile />} />
@@ -86,7 +84,7 @@ function AppRoutes() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <BrowserRouter>
+      <BrowserRouter basename="/society">
         <AuthProvider>
           <ToastProvider>
             <AppRoutes />

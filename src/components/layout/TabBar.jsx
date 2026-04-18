@@ -10,7 +10,6 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
   Wine,
-  Crown,
   CalendarDays,
   Sparkles,
   User,
@@ -23,7 +22,6 @@ import { useHaptics } from '../../hooks/useHaptics';
 /** Tab configuration — base tabs for all authenticated users */
 const tabs = [
   { label: 'Menu',    path: '/',           icon: Wine         },
-  { label: 'Society', path: '/membership', icon: Crown        },
   { label: 'Events',  path: '/events',     icon: CalendarDays },
   { label: 'At Home', path: '/at-home',    icon: Sparkles     },
   { label: 'Profile', path: '/profile',    icon: User         },

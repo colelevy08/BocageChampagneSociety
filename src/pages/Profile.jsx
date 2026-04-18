@@ -1,9 +1,8 @@
 /**
  * @file src/pages/Profile.jsx
- * @description User profile page with editable name/phone, member status,
- * account actions, Bocage contact info, and sign out with confirmation dialog.
- * Society uses a single membership product, so there are no tiers or points
- * displayed here.
+ * @description User profile page with editable name/phone, Society membership
+ * status + benefits, admin badge, Bocage contact info, and sign out.
+ * Combines profile editing with the membership overview (formerly its own tab).
  * @importedBy src/App.jsx (route: /profile)
  * @imports src/context/AuthContext.jsx, src/lib/supabase.js, src/components/ui/*,
  *          src/hooks/*, framer-motion, lucide-react, date-fns
@@ -13,9 +12,18 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import {
   User, Mail, Crown, LogOut, MapPin, Phone, Edit3,
-  Check, X, Shield, Calendar,
+  Check, X, Shield, Calendar, Wine, CalendarHeart, Sparkles, Gift, Users,
 } from 'lucide-react';
 import { format } from 'date-fns';
+
+/** Society membership benefits shown on the profile */
+const BENEFITS = [
+  { icon: Wine, title: 'Member pours', body: 'Access to allocations and rare bottles reserved for the Society.' },
+  { icon: CalendarHeart, title: 'Private events', body: 'First seat at producer dinners, library tastings, and Society nights.' },
+  { icon: Sparkles, title: 'Birthday toast', body: 'A complimentary glass of champagne to mark your birthday with us.' },
+  { icon: Gift, title: 'Early access', body: 'New arrivals, vintage releases, and At-Home dates open to members first.' },
+  { icon: Users, title: 'Bring a guest', body: 'Member-rate guest passes for Society events when you reserve in advance.' },
+];
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../components/ui/Toast';
@@ -204,6 +212,29 @@ export default function Profile() {
           </div>
         </motion.div>
       )}
+
+      {/* Society benefits */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="mb-4"
+      >
+        <h3 className="font-display text-lg text-white mb-3">What's Included</h3>
+        <div className="space-y-2">
+          {BENEFITS.map(({ icon: Icon, title, body }) => (
+            <div key={title} className="glass rounded-xl p-3 flex items-start gap-3">
+              <div className="w-8 h-8 rounded-full bg-champagne-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <Icon size={14} className="text-champagne-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-display text-sm text-white">{title}</p>
+                <p className="font-serif text-xs text-noir-400 mt-0.5 leading-relaxed">{body}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </motion.div>
 
       {/* Contact info */}
       <motion.div
