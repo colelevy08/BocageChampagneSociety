@@ -11,7 +11,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CalendarDays, MapPin, Users, Check, Clock, Share2, RefreshCw, Ticket, ChevronDown } from 'lucide-react';
+import { CalendarDays, MapPin, Users, Check, Clock, Share2, RefreshCw, Ticket, ChevronDown, Download, UtensilsCrossed, Wine, Coffee } from 'lucide-react';
 import { format, formatDistanceToNow, isPast, differenceInDays } from 'date-fns';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -312,6 +312,51 @@ export default function Events() {
           );
         })}
       </div>
+
+      {/* ── Private Gatherings promo ─────────────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
+        className="mt-8 glass-gold rounded-2xl p-6 border border-champagne-500/20"
+      >
+        <h3 className="font-display text-xl text-white mb-1">Private Gatherings</h3>
+        <p className="font-serif text-sm text-noir-300 mb-4">
+          Host an intimate, upscale event at Bocage. Three curated experiences
+          to choose from:
+        </p>
+        <div className="space-y-2.5 mb-5">
+          {[
+            { icon: UtensilsCrossed, name: "Chef's Tasting", detail: "Custom tasting menu with wine pairings \u00b7 up to 18 guests" },
+            { icon: Coffee, name: "Tea", detail: "High Tea or Royal Tea \u00b7 daytime parties before 4 pm" },
+            { icon: Wine, name: "La Soir\u00e9e", detail: "Cocktail-style evening affair with food stations & open bar options" },
+          ].map(({ icon: Icon, name, detail }) => (
+            <div key={name} className="flex items-start gap-3">
+              <Icon size={16} className="text-champagne-500 mt-0.5 flex-shrink-0" />
+              <div>
+                <span className="font-sans text-sm text-white">{name}</span>
+                <p className="font-sans text-xs text-noir-400">{detail}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="flex items-center gap-3">
+          <a
+            href="/bocage-gatherings-2026.pdf"
+            download
+            className="inline-flex items-center gap-2 px-4 py-2 bg-champagne-500 text-noir-900 font-sans text-xs font-medium uppercase tracking-wider rounded-lg hover:bg-champagne-400 transition-colors"
+          >
+            <Download size={14} />
+            Event Guide (PDF)
+          </a>
+          <a
+            href="mailto:events@bocagechampagnebar.com"
+            className="font-sans text-xs text-champagne-400 hover:text-champagne-300 transition-colors"
+          >
+            events@bocagechampagnebar.com
+          </a>
+        </div>
+      </motion.div>
     </div>
   );
 }
