@@ -48,6 +48,8 @@ export default function Profile() {
   const [houseAccount, setHouseAccount] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [showTransactions, setShowTransactions] = useState(false);
+  const [addFundsOpen, setAddFundsOpen] = useState(false);
+  const [topupLoading, setTopupLoading] = useState(false);
 
   /** Fetches house account balance and recent transactions */
   const fetchHouseAccount = useCallback(async () => {
@@ -71,6 +73,57 @@ export default function Profile() {
   }, [user]);
 
   useEffect(() => { fetchHouseAccount(); }, [fetchHouseAccount]);
+
+  // Handle the return from Stripe Checkout. Stripe appends ?topup=success
+  // (or cancel) to the success_url; we surface a toast, refresh the balance,
+  // and scrub the query param so a refresh doesn't re-fire the toast.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const topup = params.get('topup');
+    if (!topup) return;
+    if (topup === 'success') {
+      toast.success('Funds added to your house account.');
+      haptics.success();
+      fetchHouseAccount();
+    } else if (topup === 'cancel') {
+      toast.info('Top-up cancelled.');
+    }
+    params.delete('topup');
+    const qs = params.toString();
+    window.history.replaceState(null, '', window.location.pathname + (qs ? `?${qs}` : ''));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  /** Kicks off a Stripe Checkout Session for a house-account top-up */
+  async function startTopup(amountDollars) {
+    setTopupLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        toast.error('Please sign in again.');
+        return;
+      }
+      const res = await fetch('/api/stripe/create-checkout-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ amount_cents: amountDollars * 100 }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.error || 'Could not start checkout.');
+        return;
+      }
+      const { url } = await res.json();
+      window.location.href = url;
+    } catch (e) {
+      toast.error('Network error starting checkout.');
+    } finally {
+      setTopupLoading(false);
+    }
+  }
 
   /** Saves updated profile fields */
   async function handleSave() {
@@ -251,27 +304,58 @@ export default function Profile() {
           )}
         </div>
 
-        {/* Add funds CTA — shown when balance is 0 or the account isn't
-            linked to a Toast tab yet. Opens a pre-filled email so staff
-            can top up on the POS (online funding not wired up yet). */}
-        {(!houseAccount?.balance || Number(houseAccount.balance) === 0) && (
-          <div className="px-4 pb-4 border-t border-noir-700 pt-3">
-            <p className="font-sans text-[12px] text-noir-300 leading-snug mb-3">
-              Your house account is ready. Top it up to use it toward drinks,
-              bottles, and Society events — no card at the bar required.
-            </p>
-            <a
-              href={`mailto:hello@bocagechampagnebar.com?subject=Add%20funds%20to%20my%20house%20account&body=Hi%20Bocage%20team%2C%0A%0AI%27d%20like%20to%20add%20funds%20to%20the%20house%20account%20for%20${encodeURIComponent(user?.email || '')}.%20Please%20let%20me%20know%20the%20next%20step.%0A%0AThanks!`}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-champagne-500 text-noir-900 font-sans text-xs font-semibold hover:bg-champagne-400 transition-colors"
+        {/* Add funds CTA — always visible so members can top up whether
+            the balance is zero or just running low. Opens an amount picker
+            that redirects to Stripe-hosted Checkout. */}
+        <div className="px-4 pb-4 border-t border-noir-700 pt-3">
+          {!addFundsOpen && (
+            <>
+              <button
+                onClick={() => setAddFundsOpen(true)}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-champagne-500 text-noir-900 font-sans text-xs font-semibold hover:bg-champagne-400 transition-colors"
+              >
+                <Plus size={14} />
+                Add funds
+              </button>
+              <p className="font-sans text-[10px] text-noir-500 mt-2 leading-snug">
+                Secure checkout by Stripe. Funds are available at the bar immediately.
+              </p>
+            </>
+          )}
+
+          {addFundsOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: -6 }}
+              animate={{ opacity: 1, y: 0 }}
             >
-              <Plus size={14} />
-              Add funds
-            </a>
-            <p className="font-sans text-[10px] text-noir-500 mt-2 leading-snug">
-              Or add funds in person on your next visit — ask for {user?.email}.
-            </p>
-          </div>
-        )}
+              <p className="font-sans text-xs text-noir-300 mb-3 leading-snug">
+                Choose an amount to add to your house account.
+              </p>
+              <div className="grid grid-cols-3 gap-2 mb-3">
+                {[25, 50, 100, 150, 200, 500].map((amt) => (
+                  <button
+                    key={amt}
+                    onClick={() => startTopup(amt)}
+                    disabled={topupLoading}
+                    className="py-3 rounded-lg border border-champagne-500/30 bg-noir-800/50 flex items-center justify-center font-display text-base text-gradient-gold active:scale-95 transition-transform disabled:opacity-50"
+                  >
+                    ${amt}
+                  </button>
+                ))}
+              </div>
+              <button
+                onClick={() => setAddFundsOpen(false)}
+                disabled={topupLoading}
+                className="text-[11px] font-sans text-noir-400 hover:text-noir-200 transition-colors"
+              >
+                Cancel
+              </button>
+              {topupLoading && (
+                <p className="font-sans text-[11px] text-champagne-500 mt-2">Redirecting to Stripe…</p>
+              )}
+            </motion.div>
+          )}
+        </div>
 
         <AnimatePresence>
           {showTransactions && transactions.length > 0 && (
