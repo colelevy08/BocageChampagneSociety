@@ -12,7 +12,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   User, Mail, Crown, LogOut, MapPin, Phone, Edit3,
   Check, X, Shield, Calendar, Wine, CalendarHeart, Sparkles, Gift, Users,
-  CreditCard, ShoppingBag, ExternalLink, Wallet, ChevronDown, ChevronUp,
+  CreditCard, ShoppingBag, ExternalLink, Wallet, ChevronDown, ChevronUp, Plus,
 } from 'lucide-react';
 import { format } from 'date-fns';
 
@@ -223,72 +223,86 @@ export default function Profile() {
         </div>
       </motion.div>
 
-      {/* House account balance — always present (seeded at signup), shows
-          linked balance or an "ask staff to link at the bar" prompt */}
-      {houseAccount && (
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.12 }}
-          className="glass rounded-xl mb-4 overflow-hidden border border-champagne-500/20"
-        >
-          <button
-            onClick={() => setShowTransactions(!showTransactions)}
-            className="w-full p-4 flex items-center gap-3"
-            disabled={!houseAccount.toast_account_id && transactions.length === 0}
-          >
-            <Wallet size={18} className="text-champagne-500 flex-shrink-0" />
-            <div className="flex-1 text-left">
-              <p className="font-sans text-xs text-noir-500 uppercase tracking-wider">House Account</p>
-              <p className="font-display text-xl text-white mt-0.5">
-                ${Number(houseAccount.balance).toFixed(2)}
-              </p>
-              {!houseAccount.toast_account_id && (
-                <p className="font-sans text-[11px] text-noir-400 mt-1 leading-snug">
-                  Not yet linked to a bar tab. If you already have a Bocage house
-                  account, ask your server to link it to <span className="text-champagne-400">{user?.email}</span>.
-                  Don't have one? Open a house account on your next visit.
-                </p>
-              )}
-            </div>
-            {transactions.length > 0 && (
-              showTransactions
-                ? <ChevronUp size={16} className="text-noir-400" />
-                : <ChevronDown size={16} className="text-noir-400" />
-            )}
-          </button>
+      {/* House account balance — always rendered. Row is seeded at signup
+          via bocage_handle_new_user(). Falls back to $0.00 if the fetch
+          hasn't returned yet or the row is missing for any reason. */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.12 }}
+        className="glass rounded-xl mb-4 overflow-hidden border border-champagne-500/20"
+      >
+        <div className="p-4 flex items-center gap-3">
+          <Wallet size={18} className="text-champagne-500 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="font-sans text-xs text-noir-500 uppercase tracking-wider">House Account</p>
+            <p className="font-display text-xl text-white mt-0.5">
+              ${Number(houseAccount?.balance ?? 0).toFixed(2)}
+            </p>
+          </div>
+          {transactions.length > 0 && (
+            <button
+              onClick={() => setShowTransactions(!showTransactions)}
+              className="p-1 text-noir-400"
+              aria-label="Toggle transaction history"
+            >
+              {showTransactions ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+            </button>
+          )}
+        </div>
 
-          <AnimatePresence>
-            {showTransactions && transactions.length > 0 && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <div className="px-4 pb-3 space-y-2 border-t border-noir-700 pt-3">
-                  {transactions.map((tx) => (
-                    <div key={tx.id} className="flex items-center justify-between">
-                      <div>
-                        <p className="font-sans text-xs text-white">{tx.description || tx.type}</p>
-                        <p className="font-sans text-[10px] text-noir-500">
-                          {format(new Date(tx.created_at), 'MMM d, yyyy')}
-                        </p>
-                      </div>
-                      <span className={`font-sans text-sm font-medium ${
-                        tx.type === 'credit' || tx.type === 'refund'
-                          ? 'text-green-400' : 'text-rose-400'
-                      }`}>
-                        {tx.type === 'debit' ? '-' : '+'}${Math.abs(Number(tx.amount)).toFixed(2)}
-                      </span>
+        {/* Add funds CTA — shown when balance is 0 or the account isn't
+            linked to a Toast tab yet. Opens a pre-filled email so staff
+            can top up on the POS (online funding not wired up yet). */}
+        {(!houseAccount?.balance || Number(houseAccount.balance) === 0) && (
+          <div className="px-4 pb-4 border-t border-noir-700 pt-3">
+            <p className="font-sans text-[12px] text-noir-300 leading-snug mb-3">
+              Your house account is ready. Top it up to use it toward drinks,
+              bottles, and Society events — no card at the bar required.
+            </p>
+            <a
+              href={`mailto:hello@bocagechampagnebar.com?subject=Add%20funds%20to%20my%20house%20account&body=Hi%20Bocage%20team%2C%0A%0AI%27d%20like%20to%20add%20funds%20to%20the%20house%20account%20for%20${encodeURIComponent(user?.email || '')}.%20Please%20let%20me%20know%20the%20next%20step.%0A%0AThanks!`}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-champagne-500 text-noir-900 font-sans text-xs font-semibold hover:bg-champagne-400 transition-colors"
+            >
+              <Plus size={14} />
+              Add funds
+            </a>
+            <p className="font-sans text-[10px] text-noir-500 mt-2 leading-snug">
+              Or add funds in person on your next visit — ask for {user?.email}.
+            </p>
+          </div>
+        )}
+
+        <AnimatePresence>
+          {showTransactions && transactions.length > 0 && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="px-4 pb-3 space-y-2 border-t border-noir-700 pt-3">
+                {transactions.map((tx) => (
+                  <div key={tx.id} className="flex items-center justify-between">
+                    <div>
+                      <p className="font-sans text-xs text-white">{tx.description || tx.type}</p>
+                      <p className="font-sans text-[10px] text-noir-500">
+                        {format(new Date(tx.created_at), 'MMM d, yyyy')}
+                      </p>
                     </div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </motion.div>
-      )}
+                    <span className={`font-sans text-sm font-medium ${
+                      tx.type === 'credit' || tx.type === 'refund'
+                        ? 'text-green-400' : 'text-rose-400'
+                    }`}>
+                      {tx.type === 'debit' ? '-' : '+'}${Math.abs(Number(tx.amount)).toFixed(2)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </motion.div>
 
       {/* Admin badge */}
       {isAdmin && (
