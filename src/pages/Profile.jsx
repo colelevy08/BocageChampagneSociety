@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
+import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User, Mail, Crown, LogOut, MapPin, Phone, Edit3,
@@ -480,9 +481,23 @@ export default function Profile() {
         destructive
       />
 
+      {/* Legal + return-to-site footer */}
+      <div className="mt-8 flex items-center justify-center gap-4 text-[11px] font-sans text-noir-500">
+        <Link to="/privacy" className="hover:text-champagne-500 transition-colors">Privacy</Link>
+        <span className="text-noir-700">·</span>
+        <Link to="/terms" className="hover:text-champagne-500 transition-colors">Terms</Link>
+        <span className="text-noir-700">·</span>
+        <a
+          href="https://bocagechampagnebar.com/"
+          className="hover:text-champagne-500 transition-colors"
+        >
+          Main site
+        </a>
+      </div>
+
       {/* App version */}
-      <p className="text-center text-xs text-noir-600 font-sans mt-6">
-        Bocage Society v1.1.0
+      <p className="text-center text-xs text-noir-600 font-sans mt-3">
+        Bocage Society v1.2.0
       </p>
     </div>
   );

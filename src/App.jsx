@@ -20,6 +20,8 @@ import AtHome from './pages/AtHome';
 import Profile from './pages/Profile';
 import AdminInventory from './pages/AdminInventory';
 import AdminCRM from './pages/AdminCRM';
+import Privacy from './pages/Privacy';
+import Terms from './pages/Terms';
 import { Wine } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -72,6 +74,8 @@ function AppRoutes() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/admin/inventory" element={<AdminInventory />} />
         <Route path="/admin/crm" element={<AdminCRM />} />
+        <Route path="/privacy" element={<Privacy />} />
+        <Route path="/terms" element={<Terms />} />
       </Route>
     </Routes>
   );

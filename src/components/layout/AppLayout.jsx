@@ -11,7 +11,7 @@
 import { useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { WifiOff } from 'lucide-react';
+import { WifiOff, ArrowLeft } from 'lucide-react';
 import TabBar from './TabBar';
 import { useOnlineStatus } from '../../hooks/useOnlineStatus';
 
@@ -59,6 +59,20 @@ export default function AppLayout() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Persistent return-to-main-site link. Uses an absolute URL so it
+          works both when Society is accessed via bocage.vercel.app/society/*
+          (proxy) and direct at bocage-champagne-society.vercel.app/society/*,
+          where a relative "/" would just bounce back to Society's own root. */}
+      <a
+        href="https://bocagechampagnebar.com/"
+        className="block text-center py-2 px-4 border-b border-noir-800 font-sans text-[11px] text-noir-400 hover:text-champagne-500 tracking-wider uppercase transition-colors"
+      >
+        <span className="inline-flex items-center gap-1.5">
+          <ArrowLeft size={11} />
+          Bocage Champagne Bar
+        </span>
+      </a>
 
       {/* Page content with padding for TabBar */}
       <main className="pb-24">
