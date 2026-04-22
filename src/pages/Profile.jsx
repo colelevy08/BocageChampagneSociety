@@ -343,37 +343,71 @@ export default function Profile() {
         </div>
       </motion.div>
 
-      {/* Quick links — gift cards + ordering */}
+      {/* Gift cards — buy denominations or check a card balance. All
+          transactions handled on Toast's hosted checkout. */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.15 }}
-        className="mb-4"
+        className="glass rounded-2xl p-5 mb-4 border border-champagne-500/20"
       >
-        <h3 className="font-display text-lg text-white mb-3">Quick Links</h3>
-        <div className="grid grid-cols-2 gap-3">
+        <div className="flex items-center gap-2 mb-1">
+          <Gift size={18} className="text-champagne-500" />
+          <h3 className="font-display text-lg text-white">Gift Cards</h3>
+        </div>
+        <p className="font-sans text-xs text-noir-400 mb-4">
+          Give the gift of Bocage — delivered by email.
+        </p>
+
+        {/* Denomination tiles */}
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          {[25, 50, 75, 100, 150, 200].map((amount) => (
+            <a
+              key={amount}
+              href="https://www.toasttab.com/bocage-10-phila-street/giftcards"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="py-3 rounded-lg border border-champagne-500/20 bg-noir-800/50 flex items-center justify-center font-display text-base text-gradient-gold active:scale-95 transition-transform"
+            >
+              ${amount}
+            </a>
+          ))}
+        </div>
+
+        {/* Buy + Check Balance row */}
+        <div className="grid grid-cols-2 gap-2">
           <a
             href="https://www.toasttab.com/bocage-10-phila-street/giftcards"
             target="_blank"
             rel="noopener noreferrer"
-            className="glass rounded-xl p-4 flex flex-col items-center gap-2 active:scale-95 transition-transform"
+            className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-champagne-500 text-noir-900 font-sans text-xs font-semibold hover:bg-champagne-400 transition-colors"
           >
-            <div className="w-10 h-10 rounded-full bg-champagne-500/10 flex items-center justify-center">
-              <Gift size={18} className="text-champagne-500" />
-            </div>
-            <span className="font-sans text-xs text-white text-center">Buy Gift Card</span>
+            <Gift size={13} />
+            Buy
+            <ExternalLink size={11} />
           </a>
           <a
             href="https://www.toasttab.com/bocage-10-phila-street/findcard"
             target="_blank"
             rel="noopener noreferrer"
-            className="glass rounded-xl p-4 flex flex-col items-center gap-2 active:scale-95 transition-transform"
+            className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg border border-champagne-500/40 text-champagne-500 font-sans text-xs font-semibold hover:bg-champagne-500 hover:text-noir-900 transition-colors"
           >
-            <div className="w-10 h-10 rounded-full bg-champagne-500/10 flex items-center justify-center">
-              <CreditCard size={18} className="text-champagne-500" />
-            </div>
-            <span className="font-sans text-xs text-white text-center">Check Balance</span>
+            <CreditCard size={13} />
+            Check Balance
+            <ExternalLink size={11} />
           </a>
+        </div>
+      </motion.div>
+
+      {/* Quick links — ordering + reservations */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.18 }}
+        className="mb-4"
+      >
+        <h3 className="font-display text-lg text-white mb-3">Quick Links</h3>
+        <div className="grid grid-cols-2 gap-3">
           <a
             href="https://www.toasttab.com/bocage-10-phila-street/"
             target="_blank"
