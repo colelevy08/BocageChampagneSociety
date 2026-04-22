@@ -8,7 +8,7 @@
  *          src/components/ui/Input.jsx, src/components/ui/Button.jsx, framer-motion, lucide-react
  */
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Wine, Eye, EyeOff, ArrowRight, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -40,6 +40,16 @@ export default function Auth() {
   const [successMessage, setSuccessMessage] = useState('');
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [taglineIndex, setTaglineIndex] = useState(0);
+
+  // Detect email verification callback from Supabase redirect hash
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash && (hash.includes('type=signup') || hash.includes('type=email'))) {
+      setSuccessMessage('Email verified! You may now log in.');
+      // Clear the hash fragment so it doesn't persist on refresh
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    }
+  }, []);
 
   // Cycle taglines
   useState(() => {
@@ -205,6 +215,12 @@ export default function Auth() {
               required
               autoComplete="email"
             />
+            {mode === 'signup' && (
+              <p className="mt-1.5 text-[11px] font-sans text-noir-400 leading-snug">
+                Already have a Bocage house account at the bar? Sign up with the
+                same email so we can link your balance.
+              </p>
+            )}
           </div>
 
           {/* Password field — not shown for forgot mode */}

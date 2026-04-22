@@ -14,7 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Users, Crown, Calendar, Home, Search,
   RefreshCw, ChevronDown, ChevronUp, Phone,
-  Clock, Check, X, Package,
+  Clock, Check, X, Package, Wallet, Plus, Minus,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '../lib/supabase';
@@ -48,6 +48,11 @@ export default function AdminCRM() {
   const [search, setSearch] = useState('');
   const [expandedMember, setExpandedMember] = useState(null);
   const [updatingId, setUpdatingId] = useState(null);
+  const [houseAccounts, setHouseAccounts] = useState({});
+  const [creditAmount, setCreditAmount] = useState('');
+  const [creditNote, setCreditNote] = useState('');
+  const [creditType, setCreditType] = useState('credit');
+  const [creditLoading, setCreditLoading] = useState(false);
 
   /**
    * Fetches all CRM data in parallel: members, at-home bookings, event bookings.
@@ -82,6 +87,17 @@ export default function AdminCRM() {
     if (membersRes.data) setMembers(membersRes.data);
     if (atHomeRes.data)  setAtHomeBookings(atHomeRes.data);
     if (eventRes.data)   setEventBookings(eventRes.data);
+
+    // Fetch house accounts keyed by profile_id
+    const { data: accts } = await supabase
+      .from('bocage_house_accounts')
+      .select('*');
+    if (accts) {
+      const map = {};
+      for (const a of accts) map[a.profile_id] = a;
+      setHouseAccounts(map);
+    }
+
     setLoading(false);
   }, []);
 
@@ -105,6 +121,60 @@ export default function AdminCRM() {
       fetchAll();
     }
     setUpdatingId(null);
+  }
+
+  /**
+   * Credits or debits a member's house account.
+   * Creates the account if it doesn't exist yet.
+   */
+  async function handleHouseAccountAction(profileId) {
+    const amt = parseFloat(creditAmount);
+    if (!amt || amt <= 0) { toast.error('Enter a valid amount.'); return; }
+    setCreditLoading(true);
+
+    let acct = houseAccounts[profileId];
+
+    // Create account if it doesn't exist
+    if (!acct) {
+      const { data, error } = await supabase
+        .from('bocage_house_accounts')
+        .insert({ profile_id: profileId, balance: 0 })
+        .select()
+        .single();
+      if (error) { toast.error('Failed to create account.'); setCreditLoading(false); return; }
+      acct = data;
+    }
+
+    // Calculate new balance
+    const delta = creditType === 'debit' ? -amt : amt;
+    const newBalance = Number(acct.balance) + delta;
+    if (newBalance < 0) { toast.error('Insufficient balance for debit.'); setCreditLoading(false); return; }
+
+    // Update balance + insert transaction
+    const [balRes, txRes] = await Promise.all([
+      supabase
+        .from('bocage_house_accounts')
+        .update({ balance: newBalance, updated_at: new Date().toISOString() })
+        .eq('id', acct.id),
+      supabase
+        .from('bocage_house_transactions')
+        .insert({
+          account_id: acct.id,
+          amount: amt,
+          type: creditType,
+          description: creditNote || (creditType === 'credit' ? 'Account credit' : 'Account debit'),
+        }),
+    ]);
+
+    if (balRes.error || txRes.error) {
+      toast.error('Failed to update account.');
+    } else {
+      toast.success(`$${amt.toFixed(2)} ${creditType} applied.`);
+      setCreditAmount('');
+      setCreditNote('');
+      fetchAll();
+    }
+    setCreditLoading(false);
   }
 
   // ── Derived data ──────────────────────────────────────────────────────────
@@ -269,7 +339,7 @@ export default function AdminCRM() {
                         transition={{ duration: 0.2 }}
                         className="overflow-hidden"
                       >
-                        <div className="px-3 pb-3 border-t border-noir-700 pt-3 space-y-2">
+                        <div className="px-3 pb-3 border-t border-noir-700 pt-3 space-y-3">
                           {/* Contact info */}
                           <div className="flex items-center gap-3 text-xs font-sans flex-wrap">
                             {m.bocage_profiles?.phone && (
@@ -281,6 +351,68 @@ export default function AdminCRM() {
                             {m.bocage_profiles?.role === 'admin' && (
                               <Badge variant="gold" size="sm">Admin</Badge>
                             )}
+                          </div>
+
+                          {/* House account */}
+                          <div className="bg-noir-800 rounded-lg p-3">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-1.5">
+                                <Wallet size={13} className="text-champagne-500" />
+                                <span className="font-sans text-xs text-noir-300">House Account</span>
+                              </div>
+                              <span className="font-display text-base text-white">
+                                ${Number(houseAccounts[m.user_id]?.balance || 0).toFixed(2)}
+                              </span>
+                            </div>
+
+                            {/* Credit/debit form */}
+                            <div className="flex gap-1.5 mb-2">
+                              <button
+                                onClick={() => setCreditType('credit')}
+                                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-sans transition-colors ${
+                                  creditType === 'credit'
+                                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                    : 'bg-noir-700 text-noir-400 border border-noir-600'
+                                }`}
+                              >
+                                <Plus size={10} /> Credit
+                              </button>
+                              <button
+                                onClick={() => setCreditType('debit')}
+                                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-sans transition-colors ${
+                                  creditType === 'debit'
+                                    ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30'
+                                    : 'bg-noir-700 text-noir-400 border border-noir-600'
+                                }`}
+                              >
+                                <Minus size={10} /> Debit
+                              </button>
+                            </div>
+                            <div className="flex gap-1.5">
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={creditAmount}
+                                onChange={(e) => setCreditAmount(e.target.value)}
+                                placeholder="0.00"
+                                className="w-20 bg-noir-700 border border-noir-600 rounded px-2 py-1.5 text-white font-sans text-xs focus:outline-none focus:border-champagne-500"
+                              />
+                              <input
+                                type="text"
+                                value={creditNote}
+                                onChange={(e) => setCreditNote(e.target.value)}
+                                placeholder="Note (optional)"
+                                className="flex-1 bg-noir-700 border border-noir-600 rounded px-2 py-1.5 text-white font-sans text-xs placeholder:text-noir-500 focus:outline-none focus:border-champagne-500"
+                              />
+                              <button
+                                disabled={creditLoading || !creditAmount}
+                                onClick={() => handleHouseAccountAction(m.user_id)}
+                                className="px-3 py-1.5 rounded bg-champagne-500 text-noir-900 font-sans text-xs font-medium disabled:opacity-40 hover:bg-champagne-400 transition-colors"
+                              >
+                                {creditLoading ? '...' : 'Apply'}
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </motion.div>
