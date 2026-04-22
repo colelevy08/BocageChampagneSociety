@@ -103,7 +103,7 @@ export default function Profile() {
         toast.error('Please sign in again.');
         return;
       }
-      const res = await fetch('/api/stripe/create-checkout-session', {
+      const res = await fetch('/api/square/create-payment-link', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -318,7 +318,7 @@ export default function Profile() {
                 Add funds
               </button>
               <p className="font-sans text-[10px] text-noir-500 mt-2 leading-snug">
-                Secure checkout by Stripe. Funds are available at the bar immediately.
+                Secure checkout by Square. Funds are available at the bar immediately.
               </p>
             </>
           )}
@@ -351,7 +351,7 @@ export default function Profile() {
                 Cancel
               </button>
               {topupLoading && (
-                <p className="font-sans text-[11px] text-champagne-500 mt-2">Redirecting to Stripe…</p>
+                <p className="font-sans text-[11px] text-champagne-500 mt-2">Redirecting to secure checkout…</p>
               )}
             </motion.div>
           )}
