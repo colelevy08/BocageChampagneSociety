@@ -88,7 +88,7 @@ export default function AdminCRM() {
 
   // Member edit
   const [editingMember, setEditingMember] = useState(null); // user_id when editing
-  const [memberForm, setMemberForm] = useState({ full_name: '', phone: '' });
+  const [memberForm, setMemberForm] = useState({ full_name: '', phone: '', joined_at: '' });
 
   // House account
   const [creditAmount, setCreditAmount] = useState('');
@@ -152,12 +152,13 @@ export default function AdminCRM() {
     setMemberForm({
       full_name: m.bocage_profiles?.full_name || '',
       phone: m.bocage_profiles?.phone || '',
+      joined_at: toDateInput(m.joined_at),
     });
   }
 
-  async function saveMember(profileId) {
+  async function saveMember(profileId, membershipId) {
     setUpdatingId(profileId);
-    const { error } = await supabase
+    const profilePromise = supabase
       .from('bocage_profiles')
       .update({
         full_name: memberForm.full_name.trim(),
@@ -165,7 +166,24 @@ export default function AdminCRM() {
         updated_at: new Date().toISOString(),
       })
       .eq('id', profileId);
-    if (error) toast.error('Failed to save member.');
+
+    // Only update membership row if joined_at changed and we have a membership row
+    const promises = [profilePromise];
+    if (membershipId && memberForm.joined_at) {
+      promises.push(
+        supabase
+          .from('bocage_memberships')
+          .update({
+            joined_at: new Date(memberForm.joined_at + 'T12:00:00').toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', membershipId),
+      );
+    }
+
+    const results = await Promise.all(promises);
+    const err = results.find(r => r.error)?.error;
+    if (err) toast.error(`Failed to save member: ${err.message}`);
     else { toast.success('Member updated.'); setEditingMember(null); fetchAll(); }
     setUpdatingId(null);
   }
@@ -182,6 +200,43 @@ export default function AdminCRM() {
       .eq('id', profileId);
     if (error) toast.error('Failed to change role.');
     else { toast.success(`Role set to ${newRole}.`); fetchAll(); }
+    setUpdatingId(null);
+  }
+
+  /**
+   * Removes a member from the Society — clears the bocage_* rows but
+   * leaves the auth.users row intact (deleting an auth user requires
+   * service-role access, which the client SDK doesn't have). Practically
+   * this means the email can sign up again fresh; their old data is gone.
+   */
+  async function deleteMember(m) {
+    const name = m.bocage_profiles?.full_name || 'this member';
+    if (!confirm(
+      `Remove ${name} from the Society?\n\n` +
+      `This deletes their profile, membership, house-account balance + history, ` +
+      `event RSVPs, and at-home bookings. The auth login still exists; if they ` +
+      `sign in again they'll start over with a blank profile.`
+    )) return;
+
+    setUpdatingId(m.user_id);
+    // Delete in dependency order: house transactions cascade with the
+    // account, but the other tables reference auth.users(id) directly,
+    // so we have to clear them explicitly.
+    const acct = houseAccounts[m.user_id];
+    const ops = [];
+    if (acct) {
+      ops.push(supabase.from('bocage_house_transactions').delete().eq('account_id', acct.id));
+      ops.push(supabase.from('bocage_house_accounts').delete().eq('id', acct.id));
+    }
+    ops.push(supabase.from('bocage_event_bookings').delete().eq('user_id', m.user_id));
+    ops.push(supabase.from('bocage_at_home_bookings').delete().eq('user_id', m.user_id));
+    ops.push(supabase.from('bocage_memberships').delete().eq('user_id', m.user_id));
+    ops.push(supabase.from('bocage_profiles').delete().eq('id', m.user_id));
+
+    const results = await Promise.all(ops);
+    const err = results.find(r => r.error)?.error;
+    if (err) toast.error(`Delete failed: ${err.message}`);
+    else { toast.success(`${name} removed.`); setExpandedMember(null); fetchAll(); }
     setUpdatingId(null);
   }
 
@@ -306,6 +361,33 @@ export default function AdminCRM() {
     const { error } = await supabase.from('bocage_events').delete().eq('id', e.id);
     if (error) toast.error(`Delete failed: ${error.message}`);
     else { toast.success('Event deleted.'); fetchAll(); }
+    setUpdatingId(null);
+  }
+
+  // ─────────────────────── RSVP mutations ───────────────────────
+
+  async function updateRsvpStatus(rsvpId, status) {
+    setUpdatingId(rsvpId);
+    const { error } = await supabase
+      .from('bocage_event_bookings')
+      .update({ status })
+      .eq('id', rsvpId);
+    if (error) toast.error('Failed to update RSVP.');
+    else { toast.success(`RSVP marked ${status}.`); fetchAll(); }
+    setUpdatingId(null);
+  }
+
+  async function deleteRsvp(rsvp) {
+    const member = rsvp.bocage_profiles?.full_name || 'this member';
+    const event = rsvp.bocage_events?.title || 'this event';
+    if (!confirm(`Remove ${member}'s RSVP for ${event}?`)) return;
+    setUpdatingId(rsvp.id);
+    const { error } = await supabase
+      .from('bocage_event_bookings')
+      .delete()
+      .eq('id', rsvp.id);
+    if (error) toast.error(`Delete failed: ${error.message}`);
+    else { toast.success('RSVP removed.'); fetchAll(); }
     setUpdatingId(null);
   }
 
@@ -566,10 +648,18 @@ export default function AdminCRM() {
                                   className={inputClasses}
                                 />
                               </Field>
+                              <Field label="Member since">
+                                <input
+                                  type="date"
+                                  value={memberForm.joined_at}
+                                  onChange={(e) => setMemberForm(f => ({ ...f, joined_at: e.target.value }))}
+                                  className={inputClasses}
+                                />
+                              </Field>
                               <div className="flex gap-2 pt-1">
                                 <button
                                   disabled={updatingId === m.user_id}
-                                  onClick={() => saveMember(m.user_id)}
+                                  onClick={() => saveMember(m.user_id, m.id)}
                                   className="flex-1 flex items-center justify-center gap-1 py-1.5 rounded bg-champagne-500 text-noir-900 font-sans text-xs font-medium disabled:opacity-50"
                                 >
                                   <Save size={11} /> Save
@@ -581,6 +671,13 @@ export default function AdminCRM() {
                                   Cancel
                                 </button>
                               </div>
+                              <button
+                                disabled={updatingId === m.user_id}
+                                onClick={() => deleteMember(m)}
+                                className="w-full mt-2 py-1.5 rounded bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30 font-sans text-xs flex items-center justify-center gap-1 disabled:opacity-50"
+                              >
+                                <Trash2 size={11} /> Remove from Society
+                              </button>
                             </div>
                           )}
 
@@ -903,9 +1000,28 @@ export default function AdminCRM() {
                       )}
                     </p>
                   </div>
-                  <span className={`px-2 py-0.5 rounded-full font-sans text-xs ${STATUS_COLORS[b.status] || STATUS_COLORS.pending}`}>
-                    {b.status}
-                  </span>
+                  <select
+                    disabled={updatingId === b.id}
+                    value={b.status || 'confirmed'}
+                    onChange={(e) => updateRsvpStatus(b.id, e.target.value)}
+                    className={`flex-shrink-0 rounded-full font-sans text-xs px-2 py-0.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-champagne-500 disabled:opacity-50 ${
+                      STATUS_COLORS[b.status] || STATUS_COLORS.pending
+                    }`}
+                    aria-label="RSVP status"
+                  >
+                    <option value="confirmed">confirmed</option>
+                    <option value="pending">pending</option>
+                    <option value="cancelled">cancelled</option>
+                    <option value="completed">completed</option>
+                  </select>
+                  <button
+                    disabled={updatingId === b.id}
+                    onClick={() => deleteRsvp(b)}
+                    className="flex-shrink-0 p-1.5 rounded-md text-rose-400 hover:bg-rose-500/15 transition-colors disabled:opacity-50"
+                    aria-label="Delete RSVP"
+                  >
+                    <Trash2 size={13} />
+                  </button>
                 </div>
               ))}
             </div>
