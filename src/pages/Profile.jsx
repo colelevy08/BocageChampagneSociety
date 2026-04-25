@@ -17,14 +17,6 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 
-/** Society membership benefits shown on the profile */
-const BENEFITS = [
-  { icon: Wine, title: 'Member pours', body: 'Access to allocations and rare bottles reserved for the Society.' },
-  { icon: CalendarHeart, title: 'Private events', body: 'First seat at producer dinners, library tastings, and Society nights.' },
-  { icon: Sparkles, title: 'Birthday toast', body: 'A complimentary glass of champagne to mark your birthday with us.' },
-  { icon: Gift, title: 'Early access', body: 'New arrivals, vintage releases, and At-Home dates open to members first.' },
-  { icon: Users, title: 'Bring a guest', body: 'Member-rate guest passes for Society events when you reserve in advance.' },
-];
 import { useAuth } from '../context/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useToast } from '../components/ui/Toast';
@@ -32,6 +24,7 @@ import PageHeader from '../components/ui/PageHeader';
 import Button from '../components/ui/Button';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { useHaptics } from '../hooks/useHaptics';
+import { useSocietyContent, iconForName } from '../lib/societyContent';
 
 /**
  * Profile page — user info, editing, member status, contact, and sign out.
@@ -41,6 +34,7 @@ export default function Profile() {
   const { user, profile, membership, isAdmin, signOut } = useAuth();
   const toast = useToast();
   const haptics = useHaptics();
+  const { benefits } = useSocietyContent();
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(profile?.full_name || '');
   const [editPhone, setEditPhone] = useState(profile?.phone || '');
@@ -415,17 +409,20 @@ export default function Profile() {
       >
         <h3 className="font-display text-lg text-white mb-3">What's Included</h3>
         <div className="space-y-2">
-          {BENEFITS.map(({ icon: Icon, title, body }) => (
-            <div key={title} className="glass rounded-xl p-3 flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-champagne-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <Icon size={14} className="text-champagne-500" />
+          {benefits.map(({ icon, title, body }, i) => {
+            const Icon = iconForName(icon);
+            return (
+              <div key={title + i} className="glass rounded-xl p-3 flex items-start gap-3">
+                <div className="w-8 h-8 rounded-full bg-champagne-500/10 flex items-center justify-center flex-shrink-0 mt-0.5">
+                  <Icon size={14} className="text-champagne-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-display text-sm text-white">{title}</p>
+                  <p className="font-serif text-xs text-noir-400 mt-0.5 leading-relaxed">{body}</p>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-display text-sm text-white">{title}</p>
-                <p className="font-serif text-xs text-noir-400 mt-0.5 leading-relaxed">{body}</p>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </motion.div>
 

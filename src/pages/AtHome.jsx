@@ -19,6 +19,7 @@ import { useToast } from '../components/ui/Toast';
 import PageHeader from '../components/ui/PageHeader';
 import Button from '../components/ui/Button';
 import { useHaptics } from '../hooks/useHaptics';
+import { useSocietyContent } from '../lib/societyContent';
 
 /** Service tier configuration with detailed info */
 const SERVICE_TIERS = [
@@ -81,29 +82,16 @@ const SERVICE_TIERS = [
   },
 ];
 
-/** Testimonials */
-const TESTIMONIALS = [
-  { text: "The Signature experience was absolutely magical. Our guests are still talking about it months later.", author: "Sarah K.", tier: "Signature" },
-  { text: "Perfect for our anniversary. The champagne selection was exquisite and the service was impeccable.", author: "James & Rachel", tier: "Celebrate" },
-  { text: "So easy to book and the team made everything effortless. Will definitely do this again!", author: "Emily R.", tier: "Sparkle & Serve" },
-];
-
-/** FAQ items */
-const FAQS = [
-  { q: "How far in advance should I book?", a: "We recommend at least 2 weeks for Sparkle & Serve, 3 weeks for Celebrate at Home, and 4+ weeks for Signature Bocage experiences." },
-  { q: "What area do you serve?", a: "We serve the greater Saratoga Springs region, including Saratoga, Albany, and surrounding areas within 30 miles." },
-  { q: "Can I customize the champagne selection?", a: "Absolutely! Our sommelier will work with you to curate the perfect selection based on your preferences and the occasion." },
-  { q: "What's included in the cleanup?", a: "Our team handles all glassware, setup, and breakdown. You won't have to lift a finger." },
-];
-
 /**
  * AtHome page — service tier selection, testimonials, FAQ, and booking form.
+ * Testimonials and FAQs are admin-editable via AdminCRM → Content.
  * @returns {JSX.Element}
  */
 export default function AtHome() {
   const { user } = useAuth();
   const toast = useToast();
   const haptics = useHaptics();
+  const { testimonials: TESTIMONIALS, faqs: FAQS } = useSocietyContent();
   const [selectedTier, setSelectedTier] = useState(null);
   const [preferredDate, setPreferredDate] = useState('');
   const [guestCount, setGuestCount] = useState('');

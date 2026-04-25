@@ -18,6 +18,7 @@ import {
   RefreshCw, ChevronDown, ChevronUp, Phone,
   Clock, Check, X, Package, Wallet, Plus, Minus,
   Edit3, Trash2, Save, Shield, ShieldOff, MapPin, Image, Eye, EyeOff,
+  FileText, ArrowUp, ArrowDown, MessageSquare, HelpCircle, Sparkles,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '../lib/supabase';
@@ -26,6 +27,9 @@ import { useToast } from '../components/ui/Toast';
 import PageHeader from '../components/ui/PageHeader';
 import Badge from '../components/ui/Badge';
 import EmptyState from '../components/ui/EmptyState';
+import {
+  useSocietyContent, saveSocietyContent, ICON_NAMES, iconForName,
+} from '../lib/societyContent';
 
 /** Status badge color mapping */
 const STATUS_COLORS = {
@@ -69,8 +73,24 @@ export default function AdminCRM() {
   const { isAdmin, user } = useAuth();
   const toast = useToast();
 
-  const [tab, setTab] = useState('members'); // 'members' | 'events' | 'athome'
+  const [tab, setTab] = useState('members'); // 'members' | 'events' | 'athome' | 'content'
   const [eventsTab, setEventsTab] = useState('manage'); // 'manage' | 'bookings'
+  const [contentTab, setContentTab] = useState('benefits'); // 'benefits' | 'testimonials' | 'faqs'
+
+  // Society content (admin-editable text shown on Membership / Profile / AtHome)
+  const society = useSocietyContent();
+  const [benefitsDraft, setBenefitsDraft] = useState([]);
+  const [testimonialsDraft, setTestimonialsDraft] = useState([]);
+  const [faqsDraft, setFaqsDraft] = useState([]);
+  const [contentSaving, setContentSaving] = useState(false);
+
+  useEffect(() => {
+    if (!society.loading) {
+      setBenefitsDraft(society.benefits);
+      setTestimonialsDraft(society.testimonials);
+      setFaqsDraft(society.faqs);
+    }
+  }, [society.loading, society.benefits, society.testimonials, society.faqs]);
 
   // Data
   const [members, setMembers] = useState([]);
@@ -391,6 +411,29 @@ export default function AdminCRM() {
     setUpdatingId(null);
   }
 
+  // ─────────────────────── Society content edits ───────────────────────
+
+  /** Generic move-up / move-down for any draft list. */
+  function reorder(list, idx, dir) {
+    const next = [...list];
+    const target = idx + dir;
+    if (target < 0 || target >= next.length) return list;
+    [next[idx], next[target]] = [next[target], next[idx]];
+    return next;
+  }
+
+  async function saveBenefits()    { await saveContent('benefits',     benefitsDraft);     }
+  async function saveTestimonials(){ await saveContent('testimonials', testimonialsDraft); }
+  async function saveFaqs()        { await saveContent('faqs',         faqsDraft);         }
+
+  async function saveContent(key, value) {
+    setContentSaving(true);
+    const { error } = await saveSocietyContent({ [key]: value });
+    if (error) toast.error(`Save failed: ${error.message}`);
+    else { toast.success('Content saved.'); society.refetch(); }
+    setContentSaving(false);
+  }
+
   // ─────────────────────── At-home booking edits ───────────────────────
 
   function startEditingBooking(b) {
@@ -513,6 +556,7 @@ export default function AdminCRM() {
           { key: 'members', label: 'Members', icon: Users    },
           { key: 'events',  label: 'Events',  icon: Calendar },
           { key: 'athome',  label: 'At-Home', icon: Home     },
+          { key: 'content', label: 'Content', icon: FileText },
         ].map(({ key, label, icon: Icon }) => (
           <button
             key={key}
@@ -1232,6 +1276,230 @@ export default function AdminCRM() {
           })}
         </div>
       )}
+
+      {/* ─────────────────── CONTENT TAB ─────────────────── */}
+      {tab === 'content' && (
+        <div>
+          <p className="font-sans text-xs text-noir-500 mb-3">
+            Editable copy that members see on Membership, Profile, and At-Home pages.
+            Changes are live the moment you save.
+          </p>
+
+          <div className="flex gap-1 mb-3 bg-noir-800 rounded-xl p-1">
+            {[
+              { key: 'benefits',     label: 'Benefits',     icon: Sparkles      },
+              { key: 'testimonials', label: 'Testimonials', icon: MessageSquare },
+              { key: 'faqs',         label: 'FAQs',         icon: HelpCircle    },
+            ].map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => setContentTab(key)}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 rounded-lg font-sans text-xs transition-all ${
+                  contentTab === key
+                    ? 'bg-champagne-500/20 text-champagne-300 font-semibold border border-champagne-500/40'
+                    : 'text-noir-400 hover:text-white'
+                }`}
+              >
+                <Icon size={12} />
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* BENEFITS */}
+          {contentTab === 'benefits' && (
+            <div className="space-y-2">
+              <p className="font-sans text-[11px] text-noir-500 mb-1">
+                Shown on Profile and Membership pages under "What's Included."
+              </p>
+              {benefitsDraft.map((b, i) => {
+                const Icon = iconForName(b.icon);
+                return (
+                  <div key={i} className="glass rounded-xl p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-champagne-500/10 flex items-center justify-center flex-shrink-0">
+                        <Icon size={14} className="text-champagne-500" />
+                      </div>
+                      <span className="font-sans text-[10px] text-noir-500 uppercase tracking-wider">Benefit {i + 1}</span>
+                      <div className="ml-auto flex gap-1">
+                        <ReorderBtn dir={-1} onClick={() => setBenefitsDraft(reorder(benefitsDraft, i, -1))} disabled={i === 0} />
+                        <ReorderBtn dir={1}  onClick={() => setBenefitsDraft(reorder(benefitsDraft, i, 1))} disabled={i === benefitsDraft.length - 1} />
+                        <button
+                          onClick={() => setBenefitsDraft(benefitsDraft.filter((_, j) => j !== i))}
+                          className="p-1 rounded text-rose-400 hover:bg-rose-500/15"
+                          aria-label="Remove benefit"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </div>
+                    <Field label="Icon">
+                      <select
+                        value={b.icon || 'Sparkles'}
+                        onChange={(e) => setBenefitsDraft(benefitsDraft.map((x, j) => j === i ? { ...x, icon: e.target.value } : x))}
+                        className={inputClasses}
+                      >
+                        {ICON_NAMES.map((n) => <option key={n} value={n}>{n}</option>)}
+                      </select>
+                    </Field>
+                    <Field label="Title">
+                      <input
+                        type="text"
+                        value={b.title || ''}
+                        onChange={(e) => setBenefitsDraft(benefitsDraft.map((x, j) => j === i ? { ...x, title: e.target.value } : x))}
+                        className={inputClasses}
+                      />
+                    </Field>
+                    <Field label="Body">
+                      <textarea
+                        rows={2}
+                        value={b.body || ''}
+                        onChange={(e) => setBenefitsDraft(benefitsDraft.map((x, j) => j === i ? { ...x, body: e.target.value } : x))}
+                        className={inputClasses}
+                      />
+                    </Field>
+                  </div>
+                );
+              })}
+              <button
+                onClick={() => setBenefitsDraft([...benefitsDraft, { icon: 'Sparkles', title: 'New benefit', body: '' }])}
+                className="w-full py-2 rounded-lg border border-dashed border-champagne-500/40 text-champagne-400 font-sans text-xs flex items-center justify-center gap-1.5 hover:bg-champagne-500/10 transition-colors"
+              >
+                <Plus size={12} /> Add benefit
+              </button>
+              <button
+                disabled={contentSaving}
+                onClick={saveBenefits}
+                className="w-full py-2.5 rounded-lg bg-champagne-500 text-noir-900 font-sans text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50 mt-2"
+              >
+                <Save size={12} /> Save benefits
+              </button>
+            </div>
+          )}
+
+          {/* TESTIMONIALS */}
+          {contentTab === 'testimonials' && (
+            <div className="space-y-2">
+              <p className="font-sans text-[11px] text-noir-500 mb-1">
+                Shown on the At-Home page below the booking form.
+              </p>
+              {testimonialsDraft.map((t, i) => (
+                <div key={i} className="glass rounded-xl p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-sans text-[10px] text-noir-500 uppercase tracking-wider">Quote {i + 1}</span>
+                    <div className="ml-auto flex gap-1">
+                      <ReorderBtn dir={-1} onClick={() => setTestimonialsDraft(reorder(testimonialsDraft, i, -1))} disabled={i === 0} />
+                      <ReorderBtn dir={1}  onClick={() => setTestimonialsDraft(reorder(testimonialsDraft, i, 1))} disabled={i === testimonialsDraft.length - 1} />
+                      <button
+                        onClick={() => setTestimonialsDraft(testimonialsDraft.filter((_, j) => j !== i))}
+                        className="p-1 rounded text-rose-400 hover:bg-rose-500/15"
+                        aria-label="Remove testimonial"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  </div>
+                  <Field label="Quote">
+                    <textarea
+                      rows={3}
+                      value={t.text || ''}
+                      onChange={(e) => setTestimonialsDraft(testimonialsDraft.map((x, j) => j === i ? { ...x, text: e.target.value } : x))}
+                      className={inputClasses}
+                    />
+                  </Field>
+                  <div className="grid grid-cols-2 gap-2">
+                    <Field label="Author">
+                      <input
+                        type="text"
+                        value={t.author || ''}
+                        onChange={(e) => setTestimonialsDraft(testimonialsDraft.map((x, j) => j === i ? { ...x, author: e.target.value } : x))}
+                        className={inputClasses}
+                      />
+                    </Field>
+                    <Field label="Tier label">
+                      <input
+                        type="text"
+                        value={t.tier || ''}
+                        onChange={(e) => setTestimonialsDraft(testimonialsDraft.map((x, j) => j === i ? { ...x, tier: e.target.value } : x))}
+                        className={inputClasses}
+                      />
+                    </Field>
+                  </div>
+                </div>
+              ))}
+              <button
+                onClick={() => setTestimonialsDraft([...testimonialsDraft, { text: '', author: '', tier: '' }])}
+                className="w-full py-2 rounded-lg border border-dashed border-champagne-500/40 text-champagne-400 font-sans text-xs flex items-center justify-center gap-1.5 hover:bg-champagne-500/10 transition-colors"
+              >
+                <Plus size={12} /> Add testimonial
+              </button>
+              <button
+                disabled={contentSaving}
+                onClick={saveTestimonials}
+                className="w-full py-2.5 rounded-lg bg-champagne-500 text-noir-900 font-sans text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50 mt-2"
+              >
+                <Save size={12} /> Save testimonials
+              </button>
+            </div>
+          )}
+
+          {/* FAQS */}
+          {contentTab === 'faqs' && (
+            <div className="space-y-2">
+              <p className="font-sans text-[11px] text-noir-500 mb-1">
+                Shown on the At-Home page in the Common Questions accordion.
+              </p>
+              {faqsDraft.map((f, i) => (
+                <div key={i} className="glass rounded-xl p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="font-sans text-[10px] text-noir-500 uppercase tracking-wider">FAQ {i + 1}</span>
+                    <div className="ml-auto flex gap-1">
+                      <ReorderBtn dir={-1} onClick={() => setFaqsDraft(reorder(faqsDraft, i, -1))} disabled={i === 0} />
+                      <ReorderBtn dir={1}  onClick={() => setFaqsDraft(reorder(faqsDraft, i, 1))} disabled={i === faqsDraft.length - 1} />
+                      <button
+                        onClick={() => setFaqsDraft(faqsDraft.filter((_, j) => j !== i))}
+                        className="p-1 rounded text-rose-400 hover:bg-rose-500/15"
+                        aria-label="Remove FAQ"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  </div>
+                  <Field label="Question">
+                    <input
+                      type="text"
+                      value={f.q || ''}
+                      onChange={(e) => setFaqsDraft(faqsDraft.map((x, j) => j === i ? { ...x, q: e.target.value } : x))}
+                      className={inputClasses}
+                    />
+                  </Field>
+                  <Field label="Answer">
+                    <textarea
+                      rows={3}
+                      value={f.a || ''}
+                      onChange={(e) => setFaqsDraft(faqsDraft.map((x, j) => j === i ? { ...x, a: e.target.value } : x))}
+                      className={inputClasses}
+                    />
+                  </Field>
+                </div>
+              ))}
+              <button
+                onClick={() => setFaqsDraft([...faqsDraft, { q: '', a: '' }])}
+                className="w-full py-2 rounded-lg border border-dashed border-champagne-500/40 text-champagne-400 font-sans text-xs flex items-center justify-center gap-1.5 hover:bg-champagne-500/10 transition-colors"
+              >
+                <Plus size={12} /> Add FAQ
+              </button>
+              <button
+                disabled={contentSaving}
+                onClick={saveFaqs}
+                className="w-full py-2.5 rounded-lg bg-champagne-500 text-noir-900 font-sans text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50 mt-2"
+              >
+                <Save size={12} /> Save FAQs
+              </button>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -1247,5 +1515,19 @@ function Field({ label, children }) {
       <label className="block font-sans text-[10px] text-noir-400 uppercase tracking-wider mb-1">{label}</label>
       {children}
     </div>
+  );
+}
+
+function ReorderBtn({ dir, onClick, disabled }) {
+  const Icon = dir < 0 ? ArrowUp : ArrowDown;
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="p-1 rounded text-noir-400 hover:bg-noir-700 disabled:opacity-30 disabled:cursor-not-allowed"
+      aria-label={dir < 0 ? 'Move up' : 'Move down'}
+    >
+      <Icon size={12} />
+    </button>
   );
 }

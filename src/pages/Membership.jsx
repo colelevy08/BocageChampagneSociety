@@ -9,46 +9,13 @@
  */
 
 import { motion } from 'framer-motion';
-import {
-  Crown, Sparkles, CalendarHeart, Wine, Gift, Users, Mail, RefreshCw,
-} from 'lucide-react';
+import { Crown, Mail, RefreshCw } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAuth } from '../context/AuthContext';
 import PageHeader from '../components/ui/PageHeader';
 import Badge from '../components/ui/Badge';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
-
-/**
- * Curated list of membership benefits — what every Society member receives.
- * Edit this list to change the perks shown on the page; nothing is data-driven.
- */
-const BENEFITS = [
-  {
-    icon: Wine,
-    title: 'Member pours',
-    body: 'Access to allocations and rare bottles reserved for the Society — never on the public list.',
-  },
-  {
-    icon: CalendarHeart,
-    title: 'Private events',
-    body: 'First seat at producer dinners, library tastings, and seasonal Society nights.',
-  },
-  {
-    icon: Sparkles,
-    title: 'Birthday toast',
-    body: 'A complimentary glass of champagne to mark your birthday with us.',
-  },
-  {
-    icon: Gift,
-    title: 'Early access',
-    body: 'New arrivals, vintage releases, and At-Home dates open to members first.',
-  },
-  {
-    icon: Users,
-    title: 'Bring a guest',
-    body: 'Member-rate guest passes for Society events when you reserve in advance.',
-  },
-];
+import { useSocietyContent, iconForName } from '../lib/societyContent';
 
 /**
  * Membership page component — status card, benefits list, and contact CTA.
@@ -56,6 +23,7 @@ const BENEFITS = [
  */
 export default function Membership() {
   const { membership, profile, user } = useAuth();
+  const { benefits } = useSocietyContent();
 
   // Pull-to-refresh just re-pulls the auth context's underlying data via reload.
   // Membership state is sparse here, so a no-op refresh keeps the gesture feeling alive.
@@ -128,23 +96,26 @@ export default function Membership() {
       {/* Member benefits */}
       <h3 className="font-display text-xl text-white mb-4">What's Included</h3>
       <div className="space-y-3 mb-8">
-        {BENEFITS.map(({ icon: Icon, title, body }, i) => (
-          <motion.div
-            key={title}
-            initial={{ opacity: 0, x: -12 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.1 + i * 0.06 }}
-            className="glass rounded-xl p-4 flex items-start gap-3"
-          >
-            <div className="w-10 h-10 rounded-full bg-champagne-500/10 flex items-center justify-center flex-shrink-0">
-              <Icon size={18} className="text-champagne-500" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <h4 className="font-display text-base text-white">{title}</h4>
-              <p className="font-serif text-sm text-noir-300 mt-0.5 leading-relaxed">{body}</p>
-            </div>
-          </motion.div>
-        ))}
+        {benefits.map(({ icon, title, body }, i) => {
+          const Icon = iconForName(icon);
+          return (
+            <motion.div
+              key={title + i}
+              initial={{ opacity: 0, x: -12 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 + i * 0.06 }}
+              className="glass rounded-xl p-4 flex items-start gap-3"
+            >
+              <div className="w-10 h-10 rounded-full bg-champagne-500/10 flex items-center justify-center flex-shrink-0">
+                <Icon size={18} className="text-champagne-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-display text-base text-white">{title}</h4>
+                <p className="font-serif text-sm text-noir-300 mt-0.5 leading-relaxed">{body}</p>
+              </div>
+            </motion.div>
+          );
+        })}
       </div>
 
       {/* Contact CTA — for questions about the Society */}
