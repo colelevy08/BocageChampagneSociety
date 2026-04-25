@@ -28,7 +28,7 @@ import PageHeader from '../components/ui/PageHeader';
 import Badge from '../components/ui/Badge';
 import EmptyState from '../components/ui/EmptyState';
 import {
-  useSocietyContent, saveSocietyContent, ICON_NAMES, iconForName,
+  useSocietyContent, saveSocietyContent, ICON_NAMES, iconForName, TIER_COLORS,
 } from '../lib/societyContent';
 
 /** Status badge color mapping */
@@ -75,13 +75,14 @@ export default function AdminCRM() {
 
   const [tab, setTab] = useState('members'); // 'members' | 'events' | 'athome' | 'content'
   const [eventsTab, setEventsTab] = useState('manage'); // 'manage' | 'bookings'
-  const [contentTab, setContentTab] = useState('benefits'); // 'benefits' | 'testimonials' | 'faqs'
+  const [contentTab, setContentTab] = useState('benefits'); // 'benefits' | 'testimonials' | 'faqs' | 'tiers'
 
   // Society content (admin-editable text shown on Membership / Profile / AtHome)
   const society = useSocietyContent();
   const [benefitsDraft, setBenefitsDraft] = useState([]);
   const [testimonialsDraft, setTestimonialsDraft] = useState([]);
   const [faqsDraft, setFaqsDraft] = useState([]);
+  const [tiersDraft, setTiersDraft] = useState([]);
   const [contentSaving, setContentSaving] = useState(false);
 
   useEffect(() => {
@@ -89,8 +90,9 @@ export default function AdminCRM() {
       setBenefitsDraft(society.benefits);
       setTestimonialsDraft(society.testimonials);
       setFaqsDraft(society.faqs);
+      setTiersDraft(society.service_tiers);
     }
-  }, [society.loading, society.benefits, society.testimonials, society.faqs]);
+  }, [society.loading, society.benefits, society.testimonials, society.faqs, society.service_tiers]);
 
   // Data
   const [members, setMembers] = useState([]);
@@ -422,9 +424,16 @@ export default function AdminCRM() {
     return next;
   }
 
-  async function saveBenefits()    { await saveContent('benefits',     benefitsDraft);     }
-  async function saveTestimonials(){ await saveContent('testimonials', testimonialsDraft); }
-  async function saveFaqs()        { await saveContent('faqs',         faqsDraft);         }
+  async function saveBenefits()    { await saveContent('benefits',      benefitsDraft);     }
+  async function saveTestimonials(){ await saveContent('testimonials',  testimonialsDraft); }
+  async function saveFaqs()        { await saveContent('faqs',          faqsDraft);         }
+  async function saveTiers() {
+    // Quick validation: tier ids must be unique and non-empty.
+    const ids = tiersDraft.map(t => (t.id || '').trim());
+    if (ids.some(id => !id)) { toast.error('Every tier needs an id.'); return; }
+    if (new Set(ids).size !== ids.length) { toast.error('Tier ids must be unique.'); return; }
+    await saveContent('service_tiers', tiersDraft);
+  }
 
   async function saveContent(key, value) {
     setContentSaving(true);
@@ -432,6 +441,11 @@ export default function AdminCRM() {
     if (error) toast.error(`Save failed: ${error.message}`);
     else { toast.success('Content saved.'); society.refetch(); }
     setContentSaving(false);
+  }
+
+  /** Generate a URL-safe slug from a tier name. */
+  function slugify(s) {
+    return (s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
   }
 
   // ─────────────────────── At-home booking edits ───────────────────────
@@ -1285,11 +1299,12 @@ export default function AdminCRM() {
             Changes are live the moment you save.
           </p>
 
-          <div className="flex gap-1 mb-3 bg-noir-800 rounded-xl p-1">
+          <div className="flex gap-1 mb-3 bg-noir-800 rounded-xl p-1 flex-wrap">
             {[
               { key: 'benefits',     label: 'Benefits',     icon: Sparkles      },
               { key: 'testimonials', label: 'Testimonials', icon: MessageSquare },
               { key: 'faqs',         label: 'FAQs',         icon: HelpCircle    },
+              { key: 'tiers',        label: 'At-Home tiers', icon: Home          },
             ].map(({ key, label, icon: Icon }) => (
               <button
                 key={key}
@@ -1495,6 +1510,155 @@ export default function AdminCRM() {
                 className="w-full py-2.5 rounded-lg bg-champagne-500 text-noir-900 font-sans text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50 mt-2"
               >
                 <Save size={12} /> Save FAQs
+              </button>
+            </div>
+          )}
+
+          {/* TIERS */}
+          {contentTab === 'tiers' && (
+            <div className="space-y-2">
+              <p className="font-sans text-[11px] text-noir-500 mb-1">
+                The "At Home With Bocage" service options. Tier <strong>id</strong> is what's stored on each existing booking — once a tier is in use, leave its id alone.
+              </p>
+              {tiersDraft.map((t, i) => {
+                const Icon = iconForName(t.icon);
+                const updateField = (field, value) => setTiersDraft(tiersDraft.map((x, j) => j === i ? { ...x, [field]: value } : x));
+                const updateFeature = (idx, value) => {
+                  const features = [...(t.features || [])];
+                  features[idx] = value;
+                  updateField('features', features);
+                };
+                return (
+                  <div key={t.id || i} className="glass rounded-xl p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      {/* Static class on purpose — Tailwind JIT can't see dynamic
+                          `bg-${t.color}/10` strings. The selected color is shown
+                          by the Color dropdown below; preview is just an icon. */}
+                      <div className="w-9 h-9 rounded-full bg-champagne-500/10 flex items-center justify-center flex-shrink-0">
+                        <Icon size={15} className="text-champagne-500" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-display text-sm text-white truncate">{t.name || 'Untitled tier'}</p>
+                        <p className="font-sans text-[10px] text-noir-500 truncate">id: {t.id || '—'}</p>
+                      </div>
+                      <ReorderBtn dir={-1} onClick={() => setTiersDraft(reorder(tiersDraft, i, -1))} disabled={i === 0} />
+                      <ReorderBtn dir={1}  onClick={() => setTiersDraft(reorder(tiersDraft, i, 1))} disabled={i === tiersDraft.length - 1} />
+                      <button
+                        onClick={() => {
+                          if (!confirm(`Remove tier "${t.name || t.id}"? Existing bookings that reference id "${t.id}" will keep that value but won't render correctly until you re-add a tier with that id or migrate them.`)) return;
+                          setTiersDraft(tiersDraft.filter((_, j) => j !== i));
+                        }}
+                        className="p-1 rounded text-rose-400 hover:bg-rose-500/15"
+                        aria-label="Remove tier"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <Field label="Name">
+                        <input type="text" value={t.name || ''} onChange={(e) => updateField('name', e.target.value)} className={inputClasses} />
+                      </Field>
+                      <Field label="Id (immutable on existing tiers)">
+                        <input
+                          type="text"
+                          value={t.id || ''}
+                          onChange={(e) => updateField('id', slugify(e.target.value))}
+                          className={inputClasses}
+                          placeholder="auto-generated from name"
+                        />
+                      </Field>
+                    </div>
+
+                    <Field label="Tagline">
+                      <input type="text" value={t.tagline || ''} onChange={(e) => updateField('tagline', e.target.value)} className={inputClasses} />
+                    </Field>
+
+                    <Field label="Description">
+                      <textarea rows={2} value={t.description || ''} onChange={(e) => updateField('description', e.target.value)} className={inputClasses} />
+                    </Field>
+
+                    <div className="grid grid-cols-2 gap-2">
+                      <Field label="Price ($)">
+                        <input type="number" min="0" step="1" value={t.price ?? ''} onChange={(e) => updateField('price', e.target.value === '' ? null : parseFloat(e.target.value))} className={inputClasses} />
+                      </Field>
+                      <Field label="Price label">
+                        <input type="text" value={t.priceLabel || ''} onChange={(e) => updateField('priceLabel', e.target.value)} placeholder="From $250" className={inputClasses} />
+                      </Field>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <Field label="Max guests">
+                        <input type="number" min="1" step="1" value={t.maxGuests ?? ''} onChange={(e) => updateField('maxGuests', e.target.value === '' ? null : parseInt(e.target.value, 10))} className={inputClasses} />
+                      </Field>
+                      <Field label="Icon">
+                        <select value={t.icon || 'Sparkles'} onChange={(e) => updateField('icon', e.target.value)} className={inputClasses}>
+                          {ICON_NAMES.map((n) => <option key={n} value={n}>{n}</option>)}
+                        </select>
+                      </Field>
+                      <Field label="Color">
+                        <select value={t.color || 'champagne-500'} onChange={(e) => updateField('color', e.target.value)} className={inputClasses}>
+                          {TIER_COLORS.map((c) => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                      </Field>
+                    </div>
+
+                    <Field label="Features">
+                      <div className="space-y-1">
+                        {(t.features || []).map((f, fi) => (
+                          <div key={fi} className="flex gap-1.5">
+                            <input
+                              type="text"
+                              value={f}
+                              onChange={(e) => updateFeature(fi, e.target.value)}
+                              className={inputClasses}
+                            />
+                            <button
+                              onClick={() => updateField('features', (t.features || []).filter((_, j) => j !== fi))}
+                              className="p-1.5 rounded text-rose-400 hover:bg-rose-500/15 flex-shrink-0"
+                              aria-label="Remove feature"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          onClick={() => updateField('features', [...(t.features || []), ''])}
+                          className="text-[11px] font-sans text-champagne-400 hover:text-champagne-300 flex items-center gap-1"
+                        >
+                          <Plus size={11} /> Add feature
+                        </button>
+                      </div>
+                    </Field>
+                  </div>
+                );
+              })}
+              <button
+                onClick={() => setTiersDraft([
+                  ...tiersDraft,
+                  {
+                    id: 'new-tier-' + Date.now().toString(36),
+                    name: 'New tier',
+                    icon: 'Sparkles',
+                    price: 250,
+                    priceLabel: 'From $250',
+                    tagline: '',
+                    description: '',
+                    features: [],
+                    maxGuests: 10,
+                    color: 'champagne-500',
+                  },
+                ])}
+                className="w-full py-2 rounded-lg border border-dashed border-champagne-500/40 text-champagne-400 font-sans text-xs flex items-center justify-center gap-1.5 hover:bg-champagne-500/10 transition-colors"
+              >
+                <Plus size={12} /> Add tier
+              </button>
+              <button
+                disabled={contentSaving}
+                onClick={saveTiers}
+                className="w-full py-2.5 rounded-lg bg-champagne-500 text-noir-900 font-sans text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50 mt-2"
+              >
+                <Save size={12} /> Save tiers
               </button>
             </div>
           )}

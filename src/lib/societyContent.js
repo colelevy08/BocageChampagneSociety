@@ -15,14 +15,17 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   Wine, CalendarHeart, Sparkles, Gift, Users, Crown, Shield, Star,
   Award, Heart, Flame, MapPin, Calendar, Mail, Phone, Wallet, Trophy,
+  PartyPopper, Gem, Music, GlassWater, Cake, Bell,
 } from 'lucide-react';
 import { supabase } from './supabase';
 
-/** Icon strings that admins can pick from when editing a benefit. Render code
-    looks each one up in this map; unknown names fall back to Sparkles. */
+/** Icon strings that admins can pick from when editing a benefit or tier.
+    Render code looks each one up in this map; unknown names fall back to
+    Sparkles. */
 export const ICON_MAP = {
   Wine, CalendarHeart, Sparkles, Gift, Users, Crown, Shield, Star,
   Award, Heart, Flame, MapPin, Calendar, Mail, Phone, Wallet, Trophy,
+  PartyPopper, Gem, Music, GlassWater, Cake, Bell,
 };
 export const ICON_NAMES = Object.keys(ICON_MAP);
 
@@ -55,6 +58,88 @@ export const DEFAULT_FAQS = [
   { q: "What's included in the cleanup?",          a: "Our team handles all glassware, setup, and breakdown. You won't have to lift a finger." },
 ];
 
+/** Default At-Home service tiers. The tier `id` is what's persisted in the
+    bocage_at_home_bookings.service_tier column when a member books, so the
+    Content tab in CRM treats `id` as immutable on existing tiers — admins
+    can change everything else. */
+export const DEFAULT_SERVICE_TIERS = [
+  {
+    id: 'sparkle-serve',
+    name: 'Sparkle & Serve',
+    icon: 'Sparkles',
+    price: 250,
+    priceLabel: 'From $250',
+    tagline: 'For intimate gatherings',
+    description: 'A curated champagne service for intimate gatherings. Our team brings the Bocage touch to your home with a refined selection.',
+    features: [
+      'Curated selection of 3 champagnes',
+      'Professional champagne service',
+      'Glassware & setup provided',
+      'Up to 10 guests',
+      '2-hour experience',
+    ],
+    maxGuests: 10,
+    color: 'champagne-500',
+  },
+  {
+    id: 'celebrate-home',
+    name: 'Celebrate at Home',
+    icon: 'PartyPopper',
+    price: 500,
+    priceLabel: 'From $500',
+    tagline: 'For memorable celebrations',
+    description: 'An elevated champagne experience complete with sommelier-guided tasting and artisanal food pairings.',
+    features: [
+      'Premium selection of 5 champagnes',
+      'Sommelier-guided tasting',
+      'Artisanal food pairings',
+      'Full setup & cleanup',
+      'Up to 20 guests',
+      '3-hour experience',
+    ],
+    maxGuests: 20,
+    color: 'champagne-400',
+  },
+  {
+    id: 'signature',
+    name: 'Signature Bocage',
+    icon: 'Gem',
+    price: 1000,
+    priceLabel: 'From $1,000',
+    tagline: 'The ultimate experience',
+    description: 'Bespoke luxury. Rare vintages, private chef, custom décor — an unforgettable evening crafted exclusively for you.',
+    features: [
+      'Rare & vintage champagne selection',
+      'Personal sommelier for the evening',
+      'Luxury food pairings by private chef',
+      'Custom décor & ambiance',
+      'Unlimited guest count',
+      'Full concierge service',
+      '4+ hour experience',
+    ],
+    maxGuests: 100,
+    color: 'rose-400',
+  },
+];
+
+/** Tailwind color tokens admins can pick from when styling a tier. */
+export const TIER_COLORS = [
+  'champagne-500', 'champagne-400', 'champagne-300',
+  'rose-400', 'rose-500',
+  'cream-300', 'cream-500',
+  'silver-300', 'silver-500',
+];
+
+/**
+ * Tailwind safelist — literal class strings keep JIT from tree-shaking these
+ * away when they're only referenced via runtime template literals like
+ * `bg-${tier.color}/10`. Don't refactor this constant; do not break across
+ * lines. The string itself is the safelist; the export stops the bundler
+ * from removing it.
+ */
+export const TIER_COLOR_SAFELIST =
+  "bg-champagne-500/10 text-champagne-500 bg-champagne-400/10 text-champagne-400 bg-champagne-300/10 text-champagne-300 bg-rose-400/10 text-rose-400 bg-rose-500/10 text-rose-500 bg-cream-300/10 text-cream-300 bg-cream-500/10 text-cream-500 bg-silver-300/10 text-silver-300 bg-silver-500/10 text-silver-500";
+
 /**
  * useSocietyContent — pulls the editable content blocks from
  * bocage_site_data.data.society, falls back to hardcoded defaults if the
@@ -66,6 +151,7 @@ export function useSocietyContent() {
     benefits: DEFAULT_BENEFITS,
     testimonials: DEFAULT_TESTIMONIALS,
     faqs: DEFAULT_FAQS,
+    service_tiers: DEFAULT_SERVICE_TIERS,
   });
   const [loading, setLoading] = useState(true);
 
@@ -78,9 +164,10 @@ export function useSocietyContent() {
       .maybeSingle();
     const society = data?.data?.society || {};
     setContent({
-      benefits:     Array.isArray(society.benefits)     && society.benefits.length     ? society.benefits     : DEFAULT_BENEFITS,
-      testimonials: Array.isArray(society.testimonials) && society.testimonials.length ? society.testimonials : DEFAULT_TESTIMONIALS,
-      faqs:         Array.isArray(society.faqs)         && society.faqs.length         ? society.faqs         : DEFAULT_FAQS,
+      benefits:      Array.isArray(society.benefits)      && society.benefits.length      ? society.benefits      : DEFAULT_BENEFITS,
+      testimonials:  Array.isArray(society.testimonials)  && society.testimonials.length  ? society.testimonials  : DEFAULT_TESTIMONIALS,
+      faqs:          Array.isArray(society.faqs)          && society.faqs.length          ? society.faqs          : DEFAULT_FAQS,
+      service_tiers: Array.isArray(society.service_tiers) && society.service_tiers.length ? society.service_tiers : DEFAULT_SERVICE_TIERS,
     });
     setLoading(false);
   }, []);

@@ -10,7 +10,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  Sparkles, PartyPopper, Gem, CalendarDays, Users, MapPin, Check,
+  CalendarDays, Users, MapPin, Check,
   ChevronDown, Star, Quote, ArrowRight,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
@@ -19,79 +19,22 @@ import { useToast } from '../components/ui/Toast';
 import PageHeader from '../components/ui/PageHeader';
 import Button from '../components/ui/Button';
 import { useHaptics } from '../hooks/useHaptics';
-import { useSocietyContent } from '../lib/societyContent';
-
-/** Service tier configuration with detailed info */
-const SERVICE_TIERS = [
-  {
-    id: 'sparkle-serve',
-    name: 'Sparkle & Serve',
-    icon: Sparkles,
-    price: 250,
-    priceLabel: 'From $250',
-    tagline: 'For intimate gatherings',
-    description: 'A curated champagne service for intimate gatherings. Our team brings the Bocage touch to your home with a refined selection.',
-    features: [
-      'Curated selection of 3 champagnes',
-      'Professional champagne service',
-      'Glassware & setup provided',
-      'Up to 10 guests',
-      '2-hour experience',
-    ],
-    maxGuests: 10,
-    color: 'champagne-500',
-  },
-  {
-    id: 'celebrate-home',
-    name: 'Celebrate at Home',
-    icon: PartyPopper,
-    price: 500,
-    priceLabel: 'From $500',
-    tagline: 'For memorable celebrations',
-    description: 'An elevated champagne experience complete with sommelier-guided tasting and artisanal food pairings.',
-    features: [
-      'Premium selection of 5 champagnes',
-      'Sommelier-guided tasting',
-      'Artisanal food pairings',
-      'Full setup & cleanup',
-      'Up to 20 guests',
-      '3-hour experience',
-    ],
-    maxGuests: 20,
-    color: 'champagne-400',
-  },
-  {
-    id: 'signature',
-    name: 'Signature Bocage',
-    icon: Gem,
-    price: 1000,
-    priceLabel: 'From $1,000',
-    tagline: 'The ultimate experience',
-    description: 'Bespoke luxury. Rare vintages, private chef, custom décor — an unforgettable evening crafted exclusively for you.',
-    features: [
-      'Rare & vintage champagne selection',
-      'Personal sommelier for the evening',
-      'Luxury food pairings by private chef',
-      'Custom décor & ambiance',
-      'Unlimited guest count',
-      'Full concierge service',
-      '4+ hour experience',
-    ],
-    maxGuests: 100,
-    color: 'rose-400',
-  },
-];
+import { useSocietyContent, iconForName } from '../lib/societyContent';
 
 /**
  * AtHome page — service tier selection, testimonials, FAQ, and booking form.
- * Testimonials and FAQs are admin-editable via AdminCRM → Content.
+ * All copy (tiers, testimonials, FAQs) is admin-editable via AdminCRM → Content.
  * @returns {JSX.Element}
  */
 export default function AtHome() {
   const { user } = useAuth();
   const toast = useToast();
   const haptics = useHaptics();
-  const { testimonials: TESTIMONIALS, faqs: FAQS } = useSocietyContent();
+  const {
+    testimonials: TESTIMONIALS,
+    faqs: FAQS,
+    service_tiers: SERVICE_TIERS,
+  } = useSocietyContent();
   const [selectedTier, setSelectedTier] = useState(null);
   const [preferredDate, setPreferredDate] = useState('');
   const [guestCount, setGuestCount] = useState('');
@@ -196,7 +139,7 @@ export default function AtHome() {
           {/* Service tier cards */}
           <div className="space-y-4 mb-8">
             {SERVICE_TIERS.map((service, index) => {
-              const Icon = service.icon;
+              const Icon = iconForName(service.icon);
               const isSelected = selectedTier === service.id;
 
               return (
