@@ -18,7 +18,7 @@ import {
   RefreshCw, ChevronDown, ChevronUp, Phone,
   Clock, Check, X, Package, Wallet, Plus, Minus,
   Edit3, Trash2, Save, Shield, ShieldOff, MapPin, Image, Eye, EyeOff,
-  FileText, ArrowUp, ArrowDown, MessageSquare, HelpCircle, Sparkles,
+  FileText, ArrowUp, ArrowDown, MessageSquare, HelpCircle, Sparkles, Download, StickyNote,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '../lib/supabase';
@@ -110,7 +110,8 @@ export default function AdminCRM() {
 
   // Member edit
   const [editingMember, setEditingMember] = useState(null); // user_id when editing
-  const [memberForm, setMemberForm] = useState({ full_name: '', phone: '', joined_at: '' });
+  const [memberForm, setMemberForm] = useState({ full_name: '', phone: '', joined_at: '', notes: '' });
+  const [memberNotes, setMemberNotes] = useState({}); // profile_id → notes string
 
   // House account
   const [creditAmount, setCreditAmount] = useState('');
@@ -129,7 +130,7 @@ export default function AdminCRM() {
   /** Fetches all CRM data in parallel */
   const fetchAll = useCallback(async () => {
     setLoading(true);
-    const [membersRes, eventsRes, eventBookingsRes, atHomeRes, acctsRes] = await Promise.all([
+    const [membersRes, eventsRes, eventBookingsRes, atHomeRes, acctsRes, notesRes] = await Promise.all([
       supabase
         .from('bocage_memberships')
         .select(`*, bocage_profiles ( id, full_name, phone, role, created_at )`)
@@ -150,6 +151,11 @@ export default function AdminCRM() {
       supabase
         .from('bocage_house_accounts')
         .select('*'),
+      // Admin-only — RLS denies the SELECT for non-admins, returning [].
+      // Won't hurt for them since they never reach this page anyway.
+      supabase
+        .from('bocage_member_notes')
+        .select('profile_id, notes'),
     ]);
 
     if (membersRes.data)       setMembers(membersRes.data);
@@ -161,6 +167,11 @@ export default function AdminCRM() {
       const map = {};
       for (const a of acctsRes.data) map[a.profile_id] = a;
       setHouseAccounts(map);
+    }
+    if (notesRes.data) {
+      const map = {};
+      for (const n of notesRes.data) map[n.profile_id] = n.notes || '';
+      setMemberNotes(map);
     }
     setLoading(false);
   }, []);
@@ -175,22 +186,24 @@ export default function AdminCRM() {
       full_name: m.bocage_profiles?.full_name || '',
       phone: m.bocage_profiles?.phone || '',
       joined_at: toDateInput(m.joined_at),
+      notes: memberNotes[m.user_id] || '',
     });
   }
 
   async function saveMember(profileId, membershipId) {
     setUpdatingId(profileId);
-    const profilePromise = supabase
-      .from('bocage_profiles')
-      .update({
-        full_name: memberForm.full_name.trim(),
-        phone: memberForm.phone.trim() || null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', profileId);
 
-    // Only update membership row if joined_at changed and we have a membership row
-    const promises = [profilePromise];
+    const promises = [
+      supabase
+        .from('bocage_profiles')
+        .update({
+          full_name: memberForm.full_name.trim(),
+          phone: memberForm.phone.trim() || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', profileId),
+    ];
+
     if (membershipId && memberForm.joined_at) {
       promises.push(
         supabase
@@ -202,6 +215,19 @@ export default function AdminCRM() {
           .eq('id', membershipId),
       );
     }
+
+    // Upsert notes — single row per profile_id, admin-only RLS so members
+    // can't read their own. Empty string still writes (clears the note).
+    promises.push(
+      supabase
+        .from('bocage_member_notes')
+        .upsert({
+          profile_id: profileId,
+          notes: memberForm.notes,
+          updated_at: new Date().toISOString(),
+          updated_by: user?.id || null,
+        }, { onConflict: 'profile_id' }),
+    );
 
     const results = await Promise.all(promises);
     const err = results.find(r => r.error)?.error;
@@ -448,6 +474,41 @@ export default function AdminCRM() {
     return (s || '').toLowerCase().trim().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
   }
 
+  /** Build a CSV from the current filtered member list and trigger download. */
+  function exportMembersCsv() {
+    const headers = [
+      'Name', 'Phone', 'Role', 'Member since', 'House balance ($)', 'Internal notes',
+    ];
+    const escape = (v) => {
+      const s = v == null ? '' : String(v);
+      return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const rows = filteredMembers.map((m) => {
+      const p = m.bocage_profiles || {};
+      const balance = Number(houseAccounts[m.user_id]?.balance || 0).toFixed(2);
+      const joined = m.joined_at ? format(new Date(m.joined_at), 'yyyy-MM-dd') : '';
+      return [
+        p.full_name || '',
+        p.phone || '',
+        p.role || 'member',
+        joined,
+        balance,
+        memberNotes[m.user_id] || '',
+      ].map(escape).join(',');
+    });
+    const csv = [headers.join(','), ...rows].join('\n');
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `bocage-members-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   // ─────────────────────── At-home booking edits ───────────────────────
 
   function startEditingBooking(b) {
@@ -590,15 +651,25 @@ export default function AdminCRM() {
       {/* ─────────────────── MEMBERS TAB ─────────────────── */}
       {tab === 'members' && (
         <div>
-          <div className="relative mb-3">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-noir-400" size={15} />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name or phone..."
-              className="w-full bg-noir-800 border border-noir-700 rounded-lg pl-9 pr-4 py-2.5 text-white font-sans text-sm placeholder:text-noir-500 focus:outline-none focus:border-champagne-500"
-            />
+          <div className="flex gap-2 mb-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-noir-400" size={15} />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search by name or phone..."
+                className="w-full bg-noir-800 border border-noir-700 rounded-lg pl-9 pr-4 py-2.5 text-white font-sans text-sm placeholder:text-noir-500 focus:outline-none focus:border-champagne-500"
+              />
+            </div>
+            <button
+              onClick={exportMembersCsv}
+              disabled={filteredMembers.length === 0}
+              className="px-3 rounded-lg border border-noir-700 hover:border-champagne-500/50 hover:text-champagne-400 text-noir-300 font-sans text-xs flex items-center gap-1.5 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              title="Download visible members as a CSV file"
+            >
+              <Download size={12} /> CSV
+            </button>
           </div>
           <p className="text-xs font-sans text-noir-500 mb-3">{filteredMembers.length} members</p>
 
@@ -657,37 +728,47 @@ export default function AdminCRM() {
 
                           {/* Profile fields */}
                           {!isEditing ? (
-                            <div className="flex items-center justify-between gap-3">
-                              <div className="flex-1 flex items-center gap-3 text-xs font-sans text-noir-300 flex-wrap">
-                                {profile.phone ? (
-                                  <span className="flex items-center gap-1.5"><Phone size={11} /> {profile.phone}</span>
-                                ) : (
-                                  <span className="text-noir-500 italic">No phone</span>
-                                )}
+                            <>
+                              <div className="flex items-center justify-between gap-3">
+                                <div className="flex-1 flex items-center gap-3 text-xs font-sans text-noir-300 flex-wrap">
+                                  {profile.phone ? (
+                                    <span className="flex items-center gap-1.5"><Phone size={11} /> {profile.phone}</span>
+                                  ) : (
+                                    <span className="text-noir-500 italic">No phone</span>
+                                  )}
+                                </div>
+                                <div className="flex gap-1.5 flex-shrink-0">
+                                  <button
+                                    onClick={() => startEditingMember(m)}
+                                    className="px-2.5 py-1 rounded-md bg-noir-700 hover:bg-noir-600 text-noir-200 font-sans text-xs flex items-center gap-1"
+                                    title="Edit member"
+                                  >
+                                    <Edit3 size={11} /> Edit
+                                  </button>
+                                  <button
+                                    disabled={updatingId === m.user_id}
+                                    onClick={() => toggleAdmin(m.user_id, profile.role)}
+                                    className={`px-2.5 py-1 rounded-md font-sans text-xs flex items-center gap-1 transition-colors ${
+                                      isAdminMember
+                                        ? 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30'
+                                        : 'bg-champagne-500/15 hover:bg-champagne-500/25 text-champagne-400 border border-champagne-500/30'
+                                    } disabled:opacity-50`}
+                                    title={isAdminMember ? 'Revoke admin' : 'Grant admin'}
+                                  >
+                                    {isAdminMember ? <ShieldOff size={11} /> : <Shield size={11} />}
+                                    {isAdminMember ? 'Revoke' : 'Make admin'}
+                                  </button>
+                                </div>
                               </div>
-                              <div className="flex gap-1.5 flex-shrink-0">
-                                <button
-                                  onClick={() => startEditingMember(m)}
-                                  className="px-2.5 py-1 rounded-md bg-noir-700 hover:bg-noir-600 text-noir-200 font-sans text-xs flex items-center gap-1"
-                                  title="Edit member"
-                                >
-                                  <Edit3 size={11} /> Edit
-                                </button>
-                                <button
-                                  disabled={updatingId === m.user_id}
-                                  onClick={() => toggleAdmin(m.user_id, profile.role)}
-                                  className={`px-2.5 py-1 rounded-md font-sans text-xs flex items-center gap-1 transition-colors ${
-                                    isAdminMember
-                                      ? 'bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/30'
-                                      : 'bg-champagne-500/15 hover:bg-champagne-500/25 text-champagne-400 border border-champagne-500/30'
-                                  } disabled:opacity-50`}
-                                  title={isAdminMember ? 'Revoke admin' : 'Grant admin'}
-                                >
-                                  {isAdminMember ? <ShieldOff size={11} /> : <Shield size={11} />}
-                                  {isAdminMember ? 'Revoke' : 'Make admin'}
-                                </button>
-                              </div>
-                            </div>
+                              {memberNotes[m.user_id] && (
+                                <div className="bg-amber-500/5 border border-amber-500/20 rounded-lg p-2.5 flex gap-2">
+                                  <StickyNote size={12} className="text-amber-400 flex-shrink-0 mt-0.5" />
+                                  <p className="font-serif text-xs text-noir-200 italic whitespace-pre-wrap leading-relaxed">
+                                    {memberNotes[m.user_id]}
+                                  </p>
+                                </div>
+                              )}
+                            </>
                           ) : (
                             <div className="space-y-2 bg-noir-800 rounded-lg p-3">
                               <Field label="Full name">
@@ -711,6 +792,15 @@ export default function AdminCRM() {
                                   type="date"
                                   value={memberForm.joined_at}
                                   onChange={(e) => setMemberForm(f => ({ ...f, joined_at: e.target.value }))}
+                                  className={inputClasses}
+                                />
+                              </Field>
+                              <Field label="Internal notes (admin-only)">
+                                <textarea
+                                  rows={3}
+                                  value={memberForm.notes}
+                                  onChange={(e) => setMemberForm(f => ({ ...f, notes: e.target.value }))}
+                                  placeholder="Preferences, allergies, history with the bar — members can never see this."
                                   className={inputClasses}
                                 />
                               </Field>
