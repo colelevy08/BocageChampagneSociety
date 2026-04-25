@@ -29,6 +29,7 @@ import Badge from '../components/ui/Badge';
 import EmptyState from '../components/ui/EmptyState';
 import {
   useSocietyContent, saveSocietyContent, ICON_NAMES, iconForName, TIER_COLORS,
+  EDITABLE_TAB_ROUTES, DEFAULT_TAB_LABELS,
 } from '../lib/societyContent';
 
 /** Status badge color mapping */
@@ -75,14 +76,16 @@ export default function AdminCRM() {
 
   const [tab, setTab] = useState('members'); // 'members' | 'events' | 'athome' | 'content'
   const [eventsTab, setEventsTab] = useState('manage'); // 'manage' | 'bookings'
-  const [contentTab, setContentTab] = useState('benefits'); // 'benefits' | 'testimonials' | 'faqs' | 'tiers'
+  const [contentTab, setContentTab] = useState('benefits'); // 'benefits' | 'testimonials' | 'faqs' | 'tiers' | 'branding'
 
-  // Society content (admin-editable text shown on Membership / Profile / AtHome)
+  // Society content (admin-editable text shown on Membership / Profile / AtHome / Auth / TabBar)
   const society = useSocietyContent();
   const [benefitsDraft, setBenefitsDraft] = useState([]);
   const [testimonialsDraft, setTestimonialsDraft] = useState([]);
   const [faqsDraft, setFaqsDraft] = useState([]);
   const [tiersDraft, setTiersDraft] = useState([]);
+  const [taglinesDraft, setTaglinesDraft] = useState([]);
+  const [tabLabelsDraft, setTabLabelsDraft] = useState({});
   const [contentSaving, setContentSaving] = useState(false);
 
   useEffect(() => {
@@ -91,8 +94,10 @@ export default function AdminCRM() {
       setTestimonialsDraft(society.testimonials);
       setFaqsDraft(society.faqs);
       setTiersDraft(society.service_tiers);
+      setTaglinesDraft(society.taglines);
+      setTabLabelsDraft(society.tab_labels);
     }
-  }, [society.loading, society.benefits, society.testimonials, society.faqs, society.service_tiers]);
+  }, [society.loading, society.benefits, society.testimonials, society.faqs, society.service_tiers, society.taglines, society.tab_labels]);
 
   // Data
   const [members, setMembers] = useState([]);
@@ -459,6 +464,15 @@ export default function AdminCRM() {
     if (ids.some(id => !id)) { toast.error('Every tier needs an id.'); return; }
     if (new Set(ids).size !== ids.length) { toast.error('Tier ids must be unique.'); return; }
     await saveContent('service_tiers', tiersDraft);
+  }
+  async function saveBranding() {
+    // Strip empty taglines so we don't render blank rotating text.
+    const cleanTaglines = taglinesDraft.map(t => (t || '').trim()).filter(Boolean);
+    if (cleanTaglines.length === 0) { toast.error('Need at least one tagline.'); return; }
+    // Empty labels fall back to defaults; storing them as null/empty is fine —
+    // the hook coalesces with DEFAULT_TAB_LABELS on read.
+    await saveContent('taglines', cleanTaglines);
+    await saveContent('tab_labels', tabLabelsDraft);
   }
 
   async function saveContent(key, value) {
@@ -1391,10 +1405,11 @@ export default function AdminCRM() {
 
           <div className="flex gap-1 mb-3 bg-noir-800 rounded-xl p-1 flex-wrap">
             {[
-              { key: 'benefits',     label: 'Benefits',     icon: Sparkles      },
-              { key: 'testimonials', label: 'Testimonials', icon: MessageSquare },
-              { key: 'faqs',         label: 'FAQs',         icon: HelpCircle    },
+              { key: 'benefits',     label: 'Benefits',      icon: Sparkles      },
+              { key: 'testimonials', label: 'Testimonials',  icon: MessageSquare },
+              { key: 'faqs',         label: 'FAQs',          icon: HelpCircle    },
               { key: 'tiers',        label: 'At-Home tiers', icon: Home          },
+              { key: 'branding',     label: 'Branding',      icon: Crown         },
             ].map(({ key, label, icon: Icon }) => (
               <button
                 key={key}
@@ -1749,6 +1764,74 @@ export default function AdminCRM() {
                 className="w-full py-2.5 rounded-lg bg-champagne-500 text-noir-900 font-sans text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50 mt-2"
               >
                 <Save size={12} /> Save tiers
+              </button>
+            </div>
+          )}
+
+          {/* BRANDING — login taglines + tab bar labels */}
+          {contentTab === 'branding' && (
+            <div className="space-y-5">
+              {/* Taglines */}
+              <div className="space-y-2">
+                <h4 className="font-display text-sm text-white">Login screen taglines</h4>
+                <p className="font-sans text-[11px] text-noir-500">
+                  Rotate under the Bocage logo on the sign-in page. Cycle every 3 seconds in order.
+                </p>
+                {taglinesDraft.map((t, i) => (
+                  <div key={i} className="flex gap-1.5">
+                    <input
+                      type="text"
+                      value={t}
+                      onChange={(e) => setTaglinesDraft(taglinesDraft.map((x, j) => j === i ? e.target.value : x))}
+                      className={inputClasses}
+                      placeholder="Tagline text"
+                    />
+                    <ReorderBtn dir={-1} onClick={() => setTaglinesDraft(reorder(taglinesDraft, i, -1))} disabled={i === 0} />
+                    <ReorderBtn dir={1}  onClick={() => setTaglinesDraft(reorder(taglinesDraft, i, 1))} disabled={i === taglinesDraft.length - 1} />
+                    <button
+                      onClick={() => setTaglinesDraft(taglinesDraft.filter((_, j) => j !== i))}
+                      disabled={taglinesDraft.length <= 1}
+                      className="p-1.5 rounded text-rose-400 hover:bg-rose-500/15 flex-shrink-0 disabled:opacity-30 disabled:cursor-not-allowed"
+                      aria-label="Remove tagline"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  onClick={() => setTaglinesDraft([...taglinesDraft, ''])}
+                  className="text-[11px] font-sans text-champagne-400 hover:text-champagne-300 flex items-center gap-1"
+                >
+                  <Plus size={11} /> Add tagline
+                </button>
+              </div>
+
+              {/* Tab labels */}
+              <div className="space-y-2">
+                <h4 className="font-display text-sm text-white">Bottom tab labels</h4>
+                <p className="font-sans text-[11px] text-noir-500">
+                  Rename what members see in the bottom navigation. Routes and icons are fixed.
+                </p>
+                {EDITABLE_TAB_ROUTES.map((path) => (
+                  <div key={path} className="flex items-center gap-2">
+                    <span className="font-sans text-[11px] text-noir-500 w-16 flex-shrink-0">{path}</span>
+                    <input
+                      type="text"
+                      value={tabLabelsDraft[path] || ''}
+                      onChange={(e) => setTabLabelsDraft({ ...tabLabelsDraft, [path]: e.target.value })}
+                      placeholder={DEFAULT_TAB_LABELS[path]}
+                      className={inputClasses}
+                    />
+                  </div>
+                ))}
+              </div>
+
+              <button
+                disabled={contentSaving}
+                onClick={saveBranding}
+                className="w-full py-2.5 rounded-lg bg-champagne-500 text-noir-900 font-sans text-xs font-semibold flex items-center justify-center gap-1.5 disabled:opacity-50"
+              >
+                <Save size={12} /> Save branding
               </button>
             </div>
           )}

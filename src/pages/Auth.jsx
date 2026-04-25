@@ -13,13 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Wine, Eye, EyeOff, ArrowRight, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import PasswordStrength from '../components/ui/PasswordStrength';
-
-/** Taglines that cycle in the header */
-const TAGLINES = [
-  'Champagne Society',
-  'Saratoga Springs, NY',
-  'Est. Since Day One',
-];
+import { useSocietyContent } from '../lib/societyContent';
 
 /**
  * Auth page component — handles login, signup, and forgot password flows.
@@ -30,6 +24,7 @@ const TAGLINES = [
  */
 export default function Auth() {
   const { signIn, signUp } = useAuth();
+  const { taglines: TAGLINES } = useSocietyContent();
   const [mode, setMode] = useState('login'); // 'login' | 'signup' | 'forgot'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');

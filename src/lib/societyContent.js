@@ -140,6 +140,26 @@ export const TIER_COLORS = [
 export const TIER_COLOR_SAFELIST =
   "bg-champagne-500/10 text-champagne-500 bg-champagne-400/10 text-champagne-400 bg-champagne-300/10 text-champagne-300 bg-rose-400/10 text-rose-400 bg-rose-500/10 text-rose-500 bg-cream-300/10 text-cream-300 bg-cream-500/10 text-cream-500 bg-silver-300/10 text-silver-300 bg-silver-500/10 text-silver-500";
 
+/** Default rotating taglines under the Bocage logo on the login/signup screen. */
+export const DEFAULT_TAGLINES = [
+  'Champagne Society',
+  'Saratoga Springs, NY',
+  'Est. Since Day One',
+];
+
+/** Default labels for the bottom tab bar. Routes are wired in App.jsx and
+    cannot be changed from the Content tab — only the visible label is editable. */
+export const DEFAULT_TAB_LABELS = {
+  '/':         'Menu',
+  '/events':   'Events',
+  '/at-home':  'At Home',
+  '/profile':  'Profile',
+};
+
+/** Stable list of tab routes admins can rename. Anything not in this list is
+    treated as a non-editable system tab (admin inventory/CRM, etc). */
+export const EDITABLE_TAB_ROUTES = ['/', '/events', '/at-home', '/profile'];
+
 /**
  * useSocietyContent — pulls the editable content blocks from
  * bocage_site_data.data.society, falls back to hardcoded defaults if the
@@ -152,6 +172,8 @@ export function useSocietyContent() {
     testimonials: DEFAULT_TESTIMONIALS,
     faqs: DEFAULT_FAQS,
     service_tiers: DEFAULT_SERVICE_TIERS,
+    taglines: DEFAULT_TAGLINES,
+    tab_labels: DEFAULT_TAB_LABELS,
   });
   const [loading, setLoading] = useState(true);
 
@@ -168,6 +190,8 @@ export function useSocietyContent() {
       testimonials:  Array.isArray(society.testimonials)  && society.testimonials.length  ? society.testimonials  : DEFAULT_TESTIMONIALS,
       faqs:          Array.isArray(society.faqs)          && society.faqs.length          ? society.faqs          : DEFAULT_FAQS,
       service_tiers: Array.isArray(society.service_tiers) && society.service_tiers.length ? society.service_tiers : DEFAULT_SERVICE_TIERS,
+      taglines:      Array.isArray(society.taglines)      && society.taglines.length      ? society.taglines      : DEFAULT_TAGLINES,
+      tab_labels:    society.tab_labels && typeof society.tab_labels === 'object'         ? { ...DEFAULT_TAB_LABELS, ...society.tab_labels } : DEFAULT_TAB_LABELS,
     });
     setLoading(false);
   }, []);
