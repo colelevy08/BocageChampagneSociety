@@ -34,7 +34,7 @@ export default function Profile() {
   const { user, profile, membership, isAdmin, signOut } = useAuth();
   const toast = useToast();
   const haptics = useHaptics();
-  const { benefits } = useSocietyContent();
+  const { benefits, giftCardUrl, giftCardBalanceUrl } = useSocietyContent();
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(profile?.full_name || '');
   const [editPhone, setEditPhone] = useState(profile?.phone || '');
@@ -447,7 +447,7 @@ export default function Profile() {
           {[25, 50, 75, 100, 150, 200].map((amount) => (
             <a
               key={amount}
-              href="https://www.toasttab.com/bocage-10-phila-street/giftcards"
+              href={giftCardUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="py-3 rounded-lg border border-champagne-500/20 bg-noir-800/50 flex items-center justify-center font-display text-base text-gradient-gold active:scale-95 transition-transform"
@@ -460,7 +460,7 @@ export default function Profile() {
         {/* Buy + Check Balance row */}
         <div className="grid grid-cols-2 gap-2">
           <a
-            href="https://www.toasttab.com/bocage-10-phila-street/giftcards"
+            href={giftCardUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-champagne-500 text-noir-900 font-sans text-xs font-semibold hover:bg-champagne-400 transition-colors"
@@ -470,7 +470,7 @@ export default function Profile() {
             <ExternalLink size={11} />
           </a>
           <a
-            href="https://www.toasttab.com/bocage-10-phila-street/findcard"
+            href={giftCardBalanceUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg border border-champagne-500/40 text-champagne-500 font-sans text-xs font-semibold hover:bg-champagne-500 hover:text-noir-900 transition-colors"

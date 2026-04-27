@@ -160,6 +160,17 @@ export const DEFAULT_TAB_LABELS = {
     treated as a non-editable system tab (admin inventory/CRM, etc). */
 export const EDITABLE_TAB_ROUTES = ['/', '/events', '/at-home', '/profile'];
 
+/** Canonical Toast egift card URL — the long-form URL Bocage's Toast Web
+    admin shows under Takeout & Delivery → Toast Order Sources. Used when
+    bocage_site_data.data.toast.giftCardUrl isn't set. The marketing site
+    has the same fallback in GiftCardsPage. */
+export const DEFAULT_GIFT_CARD_URL =
+  'https://www.toasttab.com/local/bocage-10-phila-street/r-ad5f7549-4bd2-432b-8aa5-13323eda8d1f/giftcards';
+
+/** Public balance-check page on Toast — separate URL from the buy flow. */
+export const DEFAULT_GIFT_CARD_BALANCE_URL =
+  'https://www.toasttab.com/bocage-10-phila-street/findcard';
+
 /**
  * useSocietyContent — pulls the editable content blocks from
  * bocage_site_data.data.society, falls back to hardcoded defaults if the
@@ -174,6 +185,8 @@ export function useSocietyContent() {
     service_tiers: DEFAULT_SERVICE_TIERS,
     taglines: DEFAULT_TAGLINES,
     tab_labels: DEFAULT_TAB_LABELS,
+    giftCardUrl: DEFAULT_GIFT_CARD_URL,
+    giftCardBalanceUrl: DEFAULT_GIFT_CARD_BALANCE_URL,
   });
   const [loading, setLoading] = useState(true);
 
@@ -185,6 +198,7 @@ export function useSocietyContent() {
       .limit(1)
       .maybeSingle();
     const society = data?.data?.society || {};
+    const toast = data?.data?.toast || {};
     setContent({
       benefits:      Array.isArray(society.benefits)      && society.benefits.length      ? society.benefits      : DEFAULT_BENEFITS,
       testimonials:  Array.isArray(society.testimonials)  && society.testimonials.length  ? society.testimonials  : DEFAULT_TESTIMONIALS,
@@ -192,6 +206,10 @@ export function useSocietyContent() {
       service_tiers: Array.isArray(society.service_tiers) && society.service_tiers.length ? society.service_tiers : DEFAULT_SERVICE_TIERS,
       taglines:      Array.isArray(society.taglines)      && society.taglines.length      ? society.taglines      : DEFAULT_TAGLINES,
       tab_labels:    society.tab_labels && typeof society.tab_labels === 'object'         ? { ...DEFAULT_TAB_LABELS, ...society.tab_labels } : DEFAULT_TAB_LABELS,
+      // Read marketing-namespace toast.giftCardUrl so admins only need to
+      // set the buy/balance URLs once on the marketing AdminPage.
+      giftCardUrl:        (typeof toast.giftCardUrl === 'string'    && toast.giftCardUrl)    || DEFAULT_GIFT_CARD_URL,
+      giftCardBalanceUrl: (typeof toast.findCardUrl === 'string'    && toast.findCardUrl)    || DEFAULT_GIFT_CARD_BALANCE_URL,
     });
     setLoading(false);
   }, []);
