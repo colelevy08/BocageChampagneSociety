@@ -22,12 +22,22 @@ import { useSocietyContent } from '../lib/societyContent';
  * @returns {JSX.Element}
  */
 // Society is invite-only. Owners create accounts via the bocage /admin
-// "Bocage Champagne Society" tab, which calls Supabase's /auth/v1/invite and
-// sends a branded "Accept Invitation" email. Self-signup is intentionally
-// disabled here so the membership stays curated — prospects inquire via
-// email to zac@BocageChampagneBar.com and we onboard them manually.
+// "Bocage Champagne Society" tab, which calls our own invite endpoint
+// (api/admin-society-invite-member) on the bocage main repo. That endpoint
+// generates a Supabase magic link and ships a Bocage-branded invite email
+// via Resend. Self-signup from this Auth screen is intentionally disabled
+// so membership stays curated — prospects inquire via email to Zac and
+// we onboard them manually.
 const INQUIRE_EMAIL = 'zac@BocageChampagneBar.com';
 const INQUIRE_SUBJECT = 'Bocage Champagne Society membership inquiry';
+
+// Forgot-password flow calls a bocage main repo endpoint that generates a
+// recovery link via Supabase admin API and sends a branded email via Resend
+// (so the recipient gets a real Bocage email, not the default Supabase one).
+// Absolute URL because Society can be reached at either
+// bocage-champagne-society.vercel.app or bocagechampagnebar.com/society —
+// the bocage main repo serves the same .vercel.app URL either way.
+const PASSWORD_RESET_URL = 'https://bocage.vercel.app/api/society-request-password-reset';
 
 export default function Auth() {
   const { signIn } = useAuth();
@@ -80,11 +90,21 @@ export default function Auth() {
       if (mode === 'login') {
         const { error: authError } = await signIn(email, password);
         if (authError) setError(authError.message);
+      } else if (mode === 'forgot') {
+        // Fire-and-forget — endpoint always returns 200 so we don't leak
+        // whether the email is registered. Show the same success copy
+        // regardless of whether they're a member or a typo.
+        try {
+          await fetch(PASSWORD_RESET_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email }),
+          });
+        } catch {
+          // network errors are also silenced; UI is intentionally vague
+        }
+        setSuccessMessage("If we recognize that email, a reset link is on its way. Check your inbox in a minute.");
       }
-      // Forgot-password branch is handled below in the future; for now we
-      // simply tell the user to email Zac if they need help. (Supabase
-      // password reset still works through the AuthContext if/when we wire
-      // up a dedicated handler.)
     } catch {
       setError('Something went wrong. Please try again.');
     }
