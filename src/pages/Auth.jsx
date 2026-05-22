@@ -4,15 +4,14 @@
  * Features Bocage branding with animated logo, email/password auth,
  * password strength indicator, terms acceptance, and smooth mode transitions.
  * @importedBy src/App.jsx (rendered when user is not authenticated)
- * @imports src/context/AuthContext.jsx, src/components/ui/PasswordStrength.jsx,
- *          src/components/ui/Input.jsx, src/components/ui/Button.jsx, framer-motion, lucide-react
+ * @imports src/context/AuthContext.jsx, src/components/ui/Input.jsx,
+ *          src/components/ui/Button.jsx, framer-motion, lucide-react
  */
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Wine, Eye, EyeOff, ArrowRight, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import PasswordStrength from '../components/ui/PasswordStrength';
 import { useSocietyContent } from '../lib/societyContent';
 
 /**
@@ -22,18 +21,24 @@ import { useSocietyContent } from '../lib/societyContent';
  *
  * @returns {JSX.Element}
  */
+// Society is invite-only. Owners create accounts via the bocage /admin
+// "Bocage Champagne Society" tab, which calls Supabase's /auth/v1/invite and
+// sends a branded "Accept Invitation" email. Self-signup is intentionally
+// disabled here so the membership stays curated — prospects inquire via
+// email to zac@BocageChampagneBar.com and we onboard them manually.
+const INQUIRE_EMAIL = 'zac@BocageChampagneBar.com';
+const INQUIRE_SUBJECT = 'Bocage Champagne Society membership inquiry';
+
 export default function Auth() {
-  const { signIn, signUp } = useAuth();
+  const { signIn } = useAuth();
   const { taglines: TAGLINES } = useSocietyContent();
-  const [mode, setMode] = useState('login'); // 'login' | 'signup' | 'forgot'
+  const [mode, setMode] = useState('login'); // 'login' | 'forgot'
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
-  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [taglineIndex, setTaglineIndex] = useState(0);
 
   // Detect email verification callback. AuthContext intercepts the confirmation
@@ -75,29 +80,11 @@ export default function Auth() {
       if (mode === 'login') {
         const { error: authError } = await signIn(email, password);
         if (authError) setError(authError.message);
-      } else if (mode === 'signup') {
-        if (!fullName.trim()) {
-          setError('Please enter your full name.');
-          setLoading(false);
-          return;
-        }
-        if (!acceptedTerms) {
-          setError('Please accept the terms to continue.');
-          setLoading(false);
-          return;
-        }
-        if (password.length < 8) {
-          setError('Password must be at least 8 characters.');
-          setLoading(false);
-          return;
-        }
-        const { error: authError } = await signUp(email, password, fullName);
-        if (authError) {
-          setError(authError.message);
-        } else {
-          setSuccessMessage('Account created! Check your email to verify.');
-        }
       }
+      // Forgot-password branch is handled below in the future; for now we
+      // simply tell the user to email Zac if they need help. (Supabase
+      // password reset still works through the AuthContext if/when we wire
+      // up a dedicated handler.)
     } catch {
       setError('Something went wrong. Please try again.');
     }
@@ -107,7 +94,7 @@ export default function Auth() {
 
   /**
    * Switches between auth modes and resets state.
-   * @param {'login'|'signup'|'forgot'} newMode
+   * @param {'login'|'forgot'} newMode
    */
   function switchMode(newMode) {
     setMode(newMode);
@@ -171,37 +158,12 @@ export default function Auth() {
           {/* Mode title */}
           <div className="text-center mb-2">
             <h2 className="font-display text-xl text-white">
-              {mode === 'login' ? 'Welcome Back' : mode === 'signup' ? 'Join the Society' : 'Reset Password'}
+              {mode === 'login' ? 'Welcome Back' : 'Reset Password'}
             </h2>
             <p className="font-sans text-xs text-noir-400 mt-1">
-              {mode === 'login'
-                ? 'Sign in to your membership'
-                : mode === 'signup'
-                ? 'Create your exclusive membership'
-                : 'Enter your email to receive a reset link'}
+              {mode === 'login' ? 'Sign in to your membership' : 'Enter your email to receive a reset link'}
             </p>
           </div>
-
-          {/* Full name field — signup only */}
-          {mode === 'signup' && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-            >
-              <label className="block text-xs font-sans text-noir-300 mb-1.5 uppercase tracking-wider">
-                Full Name
-              </label>
-              <input
-                type="text"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="w-full bg-noir-800 border border-noir-600 rounded-lg px-4 py-3 text-white font-sans placeholder:text-noir-500 focus:outline-none focus:border-champagne-500 transition-colors"
-                placeholder="Your full name"
-                autoComplete="name"
-              />
-            </motion.div>
-          )}
 
           {/* Email field */}
           <div>
@@ -217,12 +179,6 @@ export default function Auth() {
               required
               autoComplete="email"
             />
-            {mode === 'signup' && (
-              <p className="mt-1.5 text-[11px] font-sans text-noir-400 leading-snug">
-                Already have a Bocage house account at the bar? Sign up with the
-                same email so we can link your balance.
-              </p>
-            )}
           </div>
 
           {/* Password field — not shown for forgot mode */}
@@ -237,10 +193,10 @@ export default function Auth() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full bg-noir-800 border border-noir-600 rounded-lg px-4 py-3 pr-12 text-white font-sans placeholder:text-noir-500 focus:outline-none focus:border-champagne-500 transition-colors"
-                  placeholder={mode === 'signup' ? 'Min. 8 characters' : '••••••••'}
+                  placeholder="••••••••"
                   required
-                  minLength={mode === 'signup' ? 8 : 6}
-                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                  minLength={6}
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"
@@ -250,25 +206,7 @@ export default function Auth() {
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
-
-              {/* Password strength — signup only */}
-              {mode === 'signup' && <PasswordStrength password={password} />}
             </div>
-          )}
-
-          {/* Terms checkbox — signup only */}
-          {mode === 'signup' && (
-            <label className="flex items-start gap-3 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={acceptedTerms}
-                onChange={(e) => setAcceptedTerms(e.target.checked)}
-                className="mt-1 accent-champagne-500 w-4 h-4"
-              />
-              <span className="text-xs font-sans text-noir-400 leading-relaxed">
-                I agree to the membership terms and privacy policy of Bocage Champagne Society
-              </span>
-            </label>
           )}
 
           {/* Forgot password link — login only */}
@@ -318,36 +256,33 @@ export default function Auth() {
               <div className="w-5 h-5 border-2 border-noir-900 border-t-transparent rounded-full animate-spin" />
             ) : (
               <>
-                {mode === 'login' ? 'Sign In' : mode === 'signup' ? 'Create Account' : 'Send Reset Link'}
+                {mode === 'login' ? 'Sign In' : 'Send Reset Link'}
                 <ArrowRight size={16} />
               </>
             )}
           </motion.button>
 
-          {/* Mode toggles */}
-          <div className="text-center space-y-2">
-            {mode === 'login' && (
-              <p className="text-noir-300 font-sans text-sm">
-                Not a member yet?{' '}
-                <button type="button" onClick={() => switchMode('signup')} className="text-champagne-500 hover:text-champagne-400 font-medium">
-                  Join Now
-                </button>
-              </p>
-            )}
-            {mode === 'signup' && (
-              <p className="text-noir-300 font-sans text-sm">
-                Already a member?{' '}
-                <button type="button" onClick={() => switchMode('login')} className="text-champagne-500 hover:text-champagne-400 font-medium">
-                  Sign In
-                </button>
-              </p>
-            )}
+          {/* Mode toggles + invite-only CTA */}
+          <div className="text-center space-y-3 pt-2">
             {mode === 'forgot' && (
               <p className="text-noir-300 font-sans text-sm">
                 <button type="button" onClick={() => switchMode('login')} className="text-champagne-500 hover:text-champagne-400 font-medium">
                   Back to Sign In
                 </button>
               </p>
+            )}
+            {mode === 'login' && (
+              <div className="pt-3 border-t border-noir-700/40">
+                <p className="text-noir-400 font-sans text-xs leading-relaxed">
+                  Membership is by invitation only. To inquire about joining the Bocage Champagne Society,
+                </p>
+                <a
+                  href={`mailto:${INQUIRE_EMAIL}?subject=${encodeURIComponent(INQUIRE_SUBJECT)}`}
+                  className="inline-block mt-2 text-champagne-500 hover:text-champagne-400 font-sans text-xs tracking-widest uppercase"
+                >
+                  Email Us
+                </a>
+              </div>
             )}
           </div>
         </motion.form>

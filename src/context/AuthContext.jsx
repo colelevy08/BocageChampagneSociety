@@ -2,7 +2,9 @@
  * @file src/context/AuthContext.jsx
  * @description Global authentication context for Bocage Champagne Society.
  * Provides user session, profile data, single membership row, admin status,
- * and auth actions (signIn, signUp, signOut) to all child components.
+ * and auth actions (signIn, signOut) to all child components.
+ * Self-signup is intentionally not exposed — Society is invite-only and
+ * accounts are created by the owners via bocage /admin -> Society CRM.
  *
  * NOTE: Society uses a single membership product (no tiers, no points).
  * The `bocage_memberships` row exists per-user solely to track join date
@@ -21,7 +23,7 @@ const AuthContext = createContext(null);
 
 /**
  * Hook to access auth context values from any component.
- * @returns {{ user, profile, membership, isAdmin, loading, signIn, signUp, signOut }}
+ * @returns {{ user, profile, membership, isAdmin, loading, signIn, signOut }}
  */
 export function useAuth() {
   const context = useContext(AuthContext);
@@ -81,13 +83,19 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let cancelled = false;
 
-    // Email-confirmation callback: Supabase auto-creates a session from the URL
-    // hash (access_token, refresh_token, type=signup). We don't want that — the
-    // user should land on the login page and explicitly sign in, not jump
-    // straight into the app. Force-signout, flag the page, and clear the hash.
+    // Email-confirmation callback for LEGACY self-signup accounts:
+    // Supabase auto-creates a session from the URL hash (access_token,
+    // refresh_token, type=signup) on confirmation. For old accounts that
+    // signed up before Society went invite-only, force-signout and land them
+    // on the login screen with a "Email verified" banner.
+    //
+    // We deliberately do NOT intercept type=invite, type=recovery, or
+    // type=magiclink — those flows need the auto-created session to keep
+    // working (new members accepting an invite should land in the app with
+    // a usable session so they can set their password and start browsing).
     const hash = window.location.hash;
-    const isConfirmCallback = hash && (hash.includes('type=signup') || hash.includes('type=email'));
-    if (isConfirmCallback) {
+    const isLegacyConfirm = hash && (hash.includes('type=signup') || hash.includes('type=email_change'));
+    if (isLegacyConfirm) {
       supabase.auth.signOut().finally(() => {
         if (cancelled) return;
         sessionStorage.setItem('bocage_just_confirmed', '1');
@@ -172,26 +180,6 @@ export function AuthProvider({ children }) {
   }
 
   /**
-   * Creates a new user account with email and password.
-   * The database trigger auto-creates profile + membership row.
-   * @param {string} email
-   * @param {string} password
-   * @param {string} fullName
-   * @returns {Promise<{error: Error|null}>}
-   */
-  async function signUp(email, password, fullName) {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { full_name: fullName },
-        emailRedirectTo: `${window.location.origin}/society`,
-      },
-    });
-    return { error };
-  }
-
-  /**
    * Signs the current user out and clears local state.
    * @returns {Promise<void>}
    */
@@ -209,7 +197,6 @@ export function AuthProvider({ children }) {
     isAdmin,
     loading,
     signIn,
-    signUp,
     signOut,
   };
 
