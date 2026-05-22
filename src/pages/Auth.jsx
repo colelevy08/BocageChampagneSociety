@@ -36,12 +36,19 @@ export default function Auth() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [taglineIndex, setTaglineIndex] = useState(0);
 
-  // Detect email verification callback from Supabase redirect hash
+  // Detect email verification callback. AuthContext intercepts the confirmation
+  // hash, force-signs out, and sets sessionStorage so the user lands here with
+  // a clean URL. Fall back to the legacy hash check in case AuthContext hasn't
+  // run yet (e.g. someone deep-linked into Auth.jsx directly).
   useEffect(() => {
+    if (sessionStorage.getItem('bocage_just_confirmed') === '1') {
+      setSuccessMessage('Email verified! You can now log in to your account.');
+      sessionStorage.removeItem('bocage_just_confirmed');
+      return;
+    }
     const hash = window.location.hash;
     if (hash && (hash.includes('type=signup') || hash.includes('type=email'))) {
       setSuccessMessage('Email verified! You may now log in.');
-      // Clear the hash fragment so it doesn't persist on refresh
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
     }
   }, []);

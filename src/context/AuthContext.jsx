@@ -81,6 +81,25 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     let cancelled = false;
 
+    // Email-confirmation callback: Supabase auto-creates a session from the URL
+    // hash (access_token, refresh_token, type=signup). We don't want that — the
+    // user should land on the login page and explicitly sign in, not jump
+    // straight into the app. Force-signout, flag the page, and clear the hash.
+    const hash = window.location.hash;
+    const isConfirmCallback = hash && (hash.includes('type=signup') || hash.includes('type=email'));
+    if (isConfirmCallback) {
+      supabase.auth.signOut().finally(() => {
+        if (cancelled) return;
+        sessionStorage.setItem('bocage_just_confirmed', '1');
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        setUser(null);
+        setProfile(null);
+        setMembership(null);
+        setLoading(false);
+      });
+      return () => { cancelled = true; };
+    }
+
     // Safety failsafe — never let the loading splash stick longer than 4s.
     // If getSession() ever hangs (network stall, broken localStorage, etc.)
     // we still drop into Auth.jsx instead of showing the rocking-glass forever.
