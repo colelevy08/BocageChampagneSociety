@@ -21,15 +21,23 @@ import { useSocietyContent } from '../lib/societyContent';
  *
  * @returns {JSX.Element}
  */
-// Society is invite-only. Owners create accounts via the bocage /admin
-// "Bocage Champagne Society" tab, which calls our own invite endpoint
-// (api/admin-society-invite-member) on the bocage main repo. That endpoint
-// generates a Supabase magic link and ships a Bocage-branded invite email
-// via Resend. Self-signup from this Auth screen is intentionally disabled
-// so membership stays curated — prospects inquire via email to Zac and
-// we onboard them manually.
+// Society membership is purchased on the public marketing site at
+// bocagechampagnebar.com/society — anyone can buy an Individual or Couples
+// tier directly through Square. After payment the bocage main repo's
+// /api/checkout-webhook creates the auth user via Supabase admin invite
+// and sends a Bocage-branded welcome email via Resend with a magic link
+// the new member clicks to set their password.
+//
+// Owners can also manually invite a member from /admin > Bocage Champagne
+// Society (api/admin-society) without taking payment, for comps / press
+// trial memberships / partner accounts.
+//
+// In both cases this Auth screen is what the magic link drops the new
+// member on after they set their password — i.e. it's a *login* surface
+// for established members, not a self-signup surface.
+const MEMBERSHIP_URL = 'https://www.bocagechampagnebar.com/society';
 const INQUIRE_EMAIL = 'clark@bocagechampagnebar.com';
-const INQUIRE_SUBJECT = 'Bocage Champagne Society membership inquiry';
+const INQUIRE_SUBJECT = 'Bocage Champagne Society — Question';
 
 // Forgot-password flow calls a bocage main repo endpoint that generates a
 // recovery link via Supabase admin API and sends a branded email via Resend
@@ -292,16 +300,24 @@ export default function Auth() {
               </p>
             )}
             {mode === 'login' && (
-              <div className="pt-3 border-t border-noir-700/40">
-                <p className="text-noir-400 font-sans text-xs leading-relaxed">
-                  Membership is by invitation only. To inquire about joining the Bocage Champagne Society,
+              <div className="pt-3 border-t border-noir-700/40 space-y-3">
+                <div>
+                  <p className="text-noir-400 font-sans text-xs leading-relaxed">
+                    Not a member yet? Join the Bocage Champagne Society —
+                  </p>
+                  <a
+                    href={MEMBERSHIP_URL}
+                    className="inline-block mt-2 text-champagne-500 hover:text-champagne-400 font-sans text-xs tracking-widest uppercase"
+                  >
+                    Become a Member &rarr;
+                  </a>
+                </div>
+                <p className="text-noir-500 font-sans text-[11px] leading-relaxed">
+                  Questions? <a
+                    href={`mailto:${INQUIRE_EMAIL}?subject=${encodeURIComponent(INQUIRE_SUBJECT)}`}
+                    className="text-champagne-500 hover:text-champagne-400 underline-offset-2 underline"
+                  >Email us</a>.
                 </p>
-                <a
-                  href={`mailto:${INQUIRE_EMAIL}?subject=${encodeURIComponent(INQUIRE_SUBJECT)}`}
-                  className="inline-block mt-2 text-champagne-500 hover:text-champagne-400 font-sans text-xs tracking-widest uppercase"
-                >
-                  Email Us
-                </a>
               </div>
             )}
           </div>

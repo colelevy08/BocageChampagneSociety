@@ -120,7 +120,7 @@ export default function Membership() {
 
       {/* Contact CTA — for questions about the Society */}
       <motion.a
-        href="mailto:Zac@SureThingHospitality.com?subject=Bocage%20Champagne%20Society"
+        href="mailto:clark@bocagechampagnebar.com?subject=Bocage%20Champagne%20Society"
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.5 }}

@@ -529,9 +529,9 @@ export default function Profile() {
             <MapPin size={16} className="text-champagne-600 flex-shrink-0" />
             10 Phila St, Saratoga Springs, NY 12866
           </a>
-          <a href="mailto:Zac@SureThingHospitality.com" className="flex items-center gap-3 text-sm font-sans text-noir-300 hover:text-white transition-colors">
+          <a href="mailto:clark@bocagechampagnebar.com" className="flex items-center gap-3 text-sm font-sans text-noir-300 hover:text-white transition-colors">
             <Mail size={16} className="text-champagne-600 flex-shrink-0" />
-            Zac@SureThingHospitality.com
+            clark@bocagechampagnebar.com
           </a>
         </div>
       </motion.div>
