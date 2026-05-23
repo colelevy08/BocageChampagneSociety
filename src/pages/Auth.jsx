@@ -28,7 +28,7 @@ import { useSocietyContent } from '../lib/societyContent';
 // via Resend. Self-signup from this Auth screen is intentionally disabled
 // so membership stays curated — prospects inquire via email to Zac and
 // we onboard them manually.
-const INQUIRE_EMAIL = 'zac@BocageChampagneBar.com';
+const INQUIRE_EMAIL = 'clark@bocagechampagnebar.com';
 const INQUIRE_SUBJECT = 'Bocage Champagne Society membership inquiry';
 
 // Forgot-password flow calls a bocage main repo endpoint that generates a
