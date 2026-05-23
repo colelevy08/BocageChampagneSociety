@@ -35,7 +35,12 @@ import { useSocietyContent } from '../lib/societyContent';
 // In both cases this Auth screen is what the magic link drops the new
 // member on after they set their password — i.e. it's a *login* surface
 // for established members, not a self-signup surface.
-const MEMBERSHIP_URL = 'https://www.bocagechampagnebar.com/society';
+// Direct .vercel.app URL while bocagechampagnebar.com's SSL is still being
+// repaired upstream — GoDaddy's domain-forwarding redirect drops the path,
+// so https://www.bocagechampagnebar.com/society would land on the homepage
+// instead of the membership page. Swap back to the canonical apex once
+// Vercel staff clears the edge SSL binding (open ticket re: ghost binding).
+const MEMBERSHIP_URL = 'https://bocage.vercel.app/society';
 const INQUIRE_EMAIL = 'clark@bocagechampagnebar.com';
 const INQUIRE_SUBJECT = 'Bocage Champagne Society — Question';
 
