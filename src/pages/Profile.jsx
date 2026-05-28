@@ -46,13 +46,20 @@ export default function Profile() {
   const [addFundsOpen, setAddFundsOpen] = useState(false);
   const [topupLoading, setTopupLoading] = useState(false);
 
-  /** Fetches house account balance and recent transactions */
+  // For couples memberships the shared dining credit lives on the PRIMARY
+  // buyer's house_account. The partner has their own auto-created $0 row
+  // from the signup trigger, which we ignore for display + top-ups. If the
+  // user has no membership row yet, we fall back to their own user id.
+  const houseAccountOwnerId = membership?.user_id || user?.id || null;
+
+  /** Fetches house account balance and recent transactions for the
+   *  canonical owner (primary, for couples; otherwise self). */
   const fetchHouseAccount = useCallback(async () => {
-    if (!user) return;
+    if (!houseAccountOwnerId) return;
     const { data: acct } = await supabase
       .from('bocage_house_accounts')
       .select('*')
-      .eq('profile_id', user.id)
+      .eq('profile_id', houseAccountOwnerId)
       .maybeSingle();
     setHouseAccount(acct);
 
@@ -65,7 +72,7 @@ export default function Profile() {
         .limit(10);
       setTransactions(txns || []);
     }
-  }, [user]);
+  }, [houseAccountOwnerId]);
 
   useEffect(() => { fetchHouseAccount(); }, [fetchHouseAccount]);
 

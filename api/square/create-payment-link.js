@@ -39,6 +39,36 @@ async function verifyUser(token) {
   return r.json();
 }
 
+/** Resolves a user to the canonical house-account owner. For couples
+ *  memberships, the partner's top-up should credit the PRIMARY buyer's
+ *  account where the shared credit lives. Returns the caller's own id
+ *  when no couples membership is found. */
+async function resolveHouseAccountOwner(token, userId) {
+  const r = await fetch(
+    `${process.env.SUPABASE_URL}/rest/v1/bocage_memberships` +
+      `?select=user_id,partner_user_id,tier,joined_at` +
+      `&or=(user_id.eq.${userId},partner_user_id.eq.${userId})`,
+    {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: process.env.SUPABASE_ANON_KEY,
+      },
+    },
+  );
+  if (!r.ok) return userId;
+  const rows = await r.json();
+  // Prefer rows with tier info (real purchases) over trigger-created stubs.
+  const ranked = (rows || []).slice().sort((a, b) => {
+    const at = a.tier ? 1 : 0;
+    const bt = b.tier ? 1 : 0;
+    if (at !== bt) return bt - at;
+    return new Date(b.joined_at || 0) - new Date(a.joined_at || 0);
+  });
+  const m = ranked[0];
+  if (!m || !m.user_id) return userId;
+  return m.user_id;
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     res.setHeader("Allow", "POST");
@@ -56,6 +86,11 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: `Amount must be between $${MIN_CENTS / 100} and $${MAX_CENTS / 100}` });
   }
 
+  // Couples partners must credit the primary's account, not their own
+  // auto-created $0 stub. Resolved server-side so a malicious client can't
+  // route funds to an arbitrary profile_id.
+  const targetProfileId = await resolveHouseAccountOwner(token, user.id);
+
   const origin = req.headers.origin || `https://${req.headers.host}`;
 
   const payload = {
@@ -70,7 +105,7 @@ export default async function handler(req, res) {
         },
       ],
       metadata: {
-        profile_id: user.id,
+        profile_id: targetProfileId,
         type: "house_account_topup",
       },
     },
