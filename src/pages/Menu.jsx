@@ -126,7 +126,7 @@ export default function Menu() {
   }
 
   return (
-    <div className="px-4 pt-6 pb-4">
+    <div className="px-4 pt-6 pb-4 max-w-6xl mx-auto">
       {/* Pull-to-refresh indicator */}
       {pullDistance > 0 && (
         <div className="flex justify-center -mt-4 mb-2">
@@ -340,7 +340,7 @@ export default function Menu() {
 
       {/* Wine cards — grid view */}
       {!loading && viewMode === 'grid' && (
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           {processed.map((wine, index) => (
             <motion.button
               key={wine.id}

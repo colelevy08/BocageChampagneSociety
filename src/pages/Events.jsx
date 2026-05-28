@@ -11,8 +11,24 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CalendarDays, MapPin, Users, Check, Clock, Share2, RefreshCw, Ticket, ChevronDown, Download, UtensilsCrossed, Wine, Coffee } from 'lucide-react';
+import { CalendarDays, MapPin, Users, Check, Clock, Share2, RefreshCw, Ticket, ChevronDown, Download, UtensilsCrossed, Wine, Coffee, Lock, Star } from 'lucide-react';
 import { format, formatDistanceToNow, isPast, differenceInDays } from 'date-fns';
+
+// Display labels + chip styling for the event_category column. Falls back to
+// "general" / no badge when an event has no category set.
+const CATEGORY_LABEL = {
+  general:          'General',
+  private_event:    'Private Event',
+  member_pour:      'Member Pour',
+  wine_dinner:      'Wine Dinner',
+  celebrity_dinner: 'Celebrity Dinner',
+};
+const CATEGORY_FILTERS = [
+  { key: 'upcoming',         label: 'All' },
+  { key: 'member_pour',      label: 'Pours' },
+  { key: 'celebrity_dinner', label: 'Celebrity' },
+  { key: 'private_event',    label: 'Private' },
+];
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../components/ui/Toast';
@@ -93,13 +109,17 @@ export default function Events() {
   const filtered = upcomingEvents.filter((event) => {
     if (filter === 'free') return !event.price || Number(event.price) === 0;
     if (filter === 'paid') return event.price && Number(event.price) > 0;
+    // Category filters match the event_category column directly.
+    if (filter === 'member_pour' || filter === 'celebrity_dinner' || filter === 'private_event' || filter === 'wine_dinner') {
+      return event.event_category === filter;
+    }
     return true;
   });
 
   const bookedCount = upcomingEvents.filter((e) => bookings.includes(e.id)).length;
 
   return (
-    <div className="px-4 pt-6 pb-4">
+    <div className="px-4 pt-6 pb-4 max-w-4xl mx-auto">
       {pullDistance > 0 && (
         <div className="flex justify-center -mt-4 mb-2">
           <RefreshCw size={20} className={`text-champagne-500 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -111,17 +131,13 @@ export default function Events() {
         subtitle={`${upcomingEvents.length} upcoming · ${bookedCount} booked`}
       />
 
-      {/* Filter chips */}
-      <div className="flex gap-2 mb-5">
-        {[
-          { key: 'upcoming', label: 'All' },
-          { key: 'free', label: 'Free' },
-          { key: 'paid', label: 'Paid' },
-        ].map(({ key, label }) => (
+      {/* Filter chips — horizontally scrollable on narrow screens */}
+      <div className="flex gap-2 mb-5 overflow-x-auto no-scrollbar pb-1">
+        {CATEGORY_FILTERS.map(({ key, label }) => (
           <button
             key={key}
             onClick={() => setFilter(key)}
-            className={`px-4 py-1.5 rounded-full text-sm font-sans transition-all ${
+            className={`whitespace-nowrap px-4 py-1.5 rounded-full text-sm font-sans transition-all ${
               filter === key
                 ? 'bg-champagne-500 text-noir-900 font-medium'
                 : 'bg-noir-800 text-noir-300 border border-noir-700'
@@ -202,6 +218,21 @@ export default function Events() {
                             </Badge>
                           )}
                         </div>
+                      </div>
+                      <div className="flex items-center flex-wrap gap-1.5 mt-1">
+                        {event.event_category && event.event_category !== 'general' && CATEGORY_LABEL[event.event_category] && (
+                          <Badge variant="gold" size="sm">{CATEGORY_LABEL[event.event_category]}</Badge>
+                        )}
+                        {event.access_mode === 'members_only' && (
+                          <Badge variant="gold" size="sm">
+                            <span className="inline-flex items-center gap-1"><Lock size={9} /> Members only</span>
+                          </Badge>
+                        )}
+                        {event.access_mode === 'members_first' && event.members_first_until && !isPast(new Date(event.members_first_until)) && (
+                          <Badge variant="gold" size="sm">
+                            <span className="inline-flex items-center gap-1"><Star size={9} /> Members first</span>
+                          </Badge>
+                        )}
                       </div>
                       <p className="font-sans text-xs text-noir-400 mt-0.5">
                         {format(eventDate, 'EEE, MMM d · h:mm a')}

@@ -155,7 +155,7 @@ export default function Profile() {
     : 'Just joined';
 
   return (
-    <div className="px-4 pt-6 pb-4">
+    <div className="px-4 pt-6 pb-4 max-w-3xl mx-auto">
       <PageHeader title="Profile" />
 
       {/* User card with edit mode */}

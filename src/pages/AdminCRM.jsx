@@ -64,7 +64,24 @@ const EMPTY_EVENT = {
   seats_remaining: '',
   price: '',
   is_active: true,
+  event_category: 'general',
+  access_mode: 'public',
+  members_first_until: '',
 };
+
+const EVENT_CATEGORY_OPTIONS = [
+  { value: 'general',          label: 'General' },
+  { value: 'private_event',    label: 'Private Event' },
+  { value: 'member_pour',      label: 'Member Pour' },
+  { value: 'wine_dinner',      label: 'Wine Dinner' },
+  { value: 'celebrity_dinner', label: 'Celebrity Dinner' },
+];
+
+const ACCESS_MODE_OPTIONS = [
+  { value: 'public',        label: 'Public — anyone can RSVP' },
+  { value: 'members_first', label: 'Members first — public RSVP opens later' },
+  { value: 'members_only',  label: 'Members only — never opens to public' },
+];
 
 /**
  * AdminCRM — full editing for members, events, and at-home bookings.
@@ -357,6 +374,9 @@ export default function AdminCRM() {
       seats_remaining: e.seats_remaining ?? '',
       price: e.price ?? '',
       is_active: e.is_active ?? true,
+      event_category: e.event_category || 'general',
+      access_mode: e.access_mode || 'public',
+      members_first_until: toLocalInput(e.members_first_until),
     });
   }
 
@@ -379,6 +399,11 @@ export default function AdminCRM() {
       seats_remaining: eventForm.seats_remaining === '' ? null : parseInt(eventForm.seats_remaining, 10),
       price: eventForm.price === '' ? null : parseFloat(eventForm.price),
       is_active: !!eventForm.is_active,
+      event_category: eventForm.event_category || 'general',
+      access_mode: eventForm.access_mode || 'public',
+      members_first_until: eventForm.access_mode === 'members_first' && eventForm.members_first_until
+        ? new Date(eventForm.members_first_until).toISOString()
+        : null,
     };
 
     let err;
@@ -971,6 +996,40 @@ export default function AdminCRM() {
                         className={inputClasses}
                       />
                     </Field>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Field label="Category">
+                        <select
+                          value={eventForm.event_category}
+                          onChange={(e) => setEventForm(f => ({ ...f, event_category: e.target.value }))}
+                          className={inputClasses}
+                        >
+                          {EVENT_CATEGORY_OPTIONS.map((o) => (
+                            <option key={o.value} value={o.value}>{o.label}</option>
+                          ))}
+                        </select>
+                      </Field>
+                      <Field label="Access">
+                        <select
+                          value={eventForm.access_mode}
+                          onChange={(e) => setEventForm(f => ({ ...f, access_mode: e.target.value }))}
+                          className={inputClasses}
+                        >
+                          {ACCESS_MODE_OPTIONS.map((o) => (
+                            <option key={o.value} value={o.value}>{o.label}</option>
+                          ))}
+                        </select>
+                      </Field>
+                    </div>
+                    {eventForm.access_mode === 'members_first' && (
+                      <Field label="Public RSVP opens at">
+                        <input
+                          type="datetime-local"
+                          value={eventForm.members_first_until}
+                          onChange={(e) => setEventForm(f => ({ ...f, members_first_until: e.target.value }))}
+                          className={inputClasses}
+                        />
+                      </Field>
+                    )}
                     <div className="grid grid-cols-2 gap-2">
                       <Field label="Date &amp; time">
                         <input
