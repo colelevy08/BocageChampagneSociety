@@ -12,7 +12,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CalendarDays, MapPin, Users, Check, Clock, Share2, RefreshCw, Ticket, ChevronDown, Download, UtensilsCrossed, Wine, Coffee, Lock, Star } from 'lucide-react';
-import { format, formatDistanceToNow, isPast, differenceInDays } from 'date-fns';
+import { format, formatDistanceToNow, isPast, differenceInDays, endOfDay } from 'date-fns';
 
 // Display labels + chip styling for the event_category column. Falls back to
 // "general" / no badge when an event has no category set.
@@ -105,7 +105,9 @@ export default function Events() {
     }
   }
 
-  const upcomingEvents = events.filter((e) => !isPast(new Date(e.event_date)));
+  // Keep events visible through the END of their day (not just until the start
+  // time), so an event with no set end time doesn't vanish the moment it begins.
+  const upcomingEvents = events.filter((e) => !isPast(endOfDay(new Date(e.event_date))));
   const filtered = upcomingEvents.filter((event) => {
     if (filter === 'free') return !event.price || Number(event.price) === 0;
     if (filter === 'paid') return event.price && Number(event.price) > 0;

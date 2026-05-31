@@ -152,18 +152,22 @@ export default function Auth() {
         transition={{ duration: 0.8, ease: 'easeOut' }}
         className="text-center mb-10 relative z-10"
       >
-        {/* Animated logo container — the Society plaque badge, cropped into the
-            gold ring (object-cover trims the sticker's black corners), keeping
-            the gold glow + gentle rock. */}
+        {/* Animated logo — the Society plaque badge shown whole (no frame), with
+            a soft gold glow radiating from behind it, keeping the gentle rock. */}
         <motion.div
           animate={{ rotate: [0, 5, -5, 0] }}
           transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-          className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-champagne-500/10 border border-champagne-500/20 mb-5 glow-gold overflow-hidden"
+          className="relative inline-flex items-center justify-center mb-5"
         >
+          {/* Gold glow behind the badge */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 m-auto w-24 h-24 rounded-full bg-champagne-500/40 blur-2xl"
+          />
           <img
             src={societyLogo}
             alt="Bocage Champagne Society"
-            className="w-full h-full object-cover rounded-full"
+            className="relative w-24 h-24 object-contain"
             draggable={false}
           />
         </motion.div>
