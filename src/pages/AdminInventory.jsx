@@ -11,7 +11,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, X, Upload, Trash2, Edit3, Wine as WineIcon, Eye, EyeOff,
-  Save, Search, BarChart3, Package, Star, TrendingUp, RefreshCw,
+  Save, Search, BarChart3, Package, Star, TrendingUp, RefreshCw, Heart,
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -51,6 +51,7 @@ export default function AdminInventory() {
   const toast = useToast();
   const haptics = useHaptics();
   const [wines, setWines] = useState([]);
+  const [favoriteCounts, setFavoriteCounts] = useState({}); // wine_id -> member favorite count
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -72,6 +73,16 @@ export default function AdminInventory() {
       .select('*')
       .order('created_at', { ascending: false });
     if (data) setWines(data);
+
+    // Aggregate member favorites so owners can see what's most loved and keep
+    // popular bottles stocked. Counts come from a SECURITY DEFINER function.
+    const { data: counts } = await supabase.rpc('bocage_wine_favorite_counts');
+    if (counts) {
+      const map = {};
+      for (const row of counts) map[row.wine_id] = Number(row.favorite_count);
+      setFavoriteCounts(map);
+    }
+
     setLoading(false);
   }, []);
 
@@ -325,6 +336,11 @@ export default function AdminInventory() {
                   {wine.stock_count !== null && (
                     <span className={`font-sans text-xs ${wine.stock_count <= 5 ? 'text-rose-400' : 'text-noir-400'}`}>
                       {wine.stock_count} in stock
+                    </span>
+                  )}
+                  {favoriteCounts[wine.id] > 0 && (
+                    <span className="flex items-center gap-0.5 font-sans text-xs text-rose-400" title="Member favorites">
+                      <Heart size={10} fill="currentColor" /> {favoriteCounts[wine.id]}
                     </span>
                   )}
                 </div>

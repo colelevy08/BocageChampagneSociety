@@ -12,7 +12,7 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   User, Mail, Crown, LogOut, MapPin, Phone, Edit3,
-  Check, X, Shield, Calendar, Wine, CalendarHeart, Sparkles, Gift, Users,
+  Check, X, Shield, Calendar, Wine, CalendarHeart, Sparkles, Gift, Users, Heart,
   CreditCard, ShoppingBag, ExternalLink, Wallet, ChevronDown, ChevronUp, Plus,
 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -25,6 +25,7 @@ import Button from '../components/ui/Button';
 import ConfirmDialog from '../components/ui/ConfirmDialog';
 import { useHaptics } from '../hooks/useHaptics';
 import { useSocietyContent, iconForName } from '../lib/societyContent';
+import { useFavorites } from '../hooks/useFavorites';
 
 /**
  * Profile page — user info, editing, member status, contact, and sign out.
@@ -35,6 +36,7 @@ export default function Profile() {
   const toast = useToast();
   const haptics = useHaptics();
   const { benefits, giftCardUrl, giftCardBalanceUrl } = useSocietyContent();
+  const { favorites } = useFavorites();
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(profile?.full_name || '');
   const [editPhone, setEditPhone] = useState(profile?.phone || '');
@@ -45,6 +47,10 @@ export default function Profile() {
   const [showTransactions, setShowTransactions] = useState(false);
   const [addFundsOpen, setAddFundsOpen] = useState(false);
   const [topupLoading, setTopupLoading] = useState(false);
+  const [favoriteWines, setFavoriteWines] = useState([]);
+  const [editBirthday, setEditBirthday] = useState('');
+  const [editAnniversary, setEditAnniversary] = useState('');
+  const [savingDates, setSavingDates] = useState(false);
 
   // For couples memberships the shared dining credit lives on the PRIMARY
   // buyer's house_account. The partner has their own auto-created $0 row
@@ -154,6 +160,61 @@ export default function Profile() {
   async function handleSignOut() {
     await signOut();
     toast.info('You\'ve been signed out.');
+  }
+
+  // Load full details for the member's favorited wines (hearted on the menu)
+  // so we can list them here. Re-runs whenever the favorites set changes.
+  useEffect(() => {
+    const ids = [...favorites];
+    if (ids.length === 0) { setFavoriteWines([]); return; }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from('bocage_wines')
+        .select('id, name, producer, region, vintage, price_glass, is_member_pour')
+        .in('id', ids);
+      if (!cancelled) setFavoriteWines(data || []);
+    })();
+    return () => { cancelled = true; };
+  }, [favorites]);
+
+  // Keep the celebration date inputs in sync if profile/membership load late.
+  useEffect(() => { setEditBirthday(profile?.birthday || ''); }, [profile?.birthday]);
+  useEffect(() => { setEditAnniversary(membership?.anniversary_date || ''); }, [membership?.anniversary_date]);
+
+  const isCouple = membership?.tier === 'couple';
+  const isPrimaryMember = !!user?.id && user.id === membership?.user_id;
+
+  /** Save birthday (on the profile) and, for the primary on a couples plan, the
+   *  shared anniversary (on the membership). Only writes fields that changed. */
+  async function saveCelebrations() {
+    setSavingDates(true);
+    try {
+      const ops = [];
+      if (editBirthday !== (profile?.birthday || '')) {
+        ops.push(
+          supabase.from('bocage_profiles')
+            .update({ birthday: editBirthday || null, updated_at: new Date().toISOString() })
+            .eq('id', user.id),
+        );
+      }
+      if (isCouple && isPrimaryMember && editAnniversary !== (membership?.anniversary_date || '')) {
+        ops.push(
+          supabase.from('bocage_memberships')
+            .update({ anniversary_date: editAnniversary || null })
+            .eq('id', membership.id),
+        );
+      }
+      if (ops.length === 0) { toast.info('Nothing to save.'); return; }
+      const results = await Promise.all(ops);
+      const failed = results.find((r) => r.error);
+      if (failed?.error) throw failed.error;
+      toast.success('Saved.');
+    } catch (e) {
+      toast.error(e.message || 'Could not save your dates.');
+    } finally {
+      setSavingDates(false);
+    }
   }
 
   // Stats for the profile card
@@ -276,6 +337,63 @@ export default function Profile() {
         <div className="flex-1">
           <p className="font-sans text-xs text-noir-500 uppercase tracking-wider">Member Since</p>
           <p className="font-display text-base text-white mt-0.5">{memberSince}</p>
+        </div>
+      </motion.div>
+
+      {/* Celebrations — birthday (everyone) + anniversary (couples). Birthday
+          can be added here if it wasn't captured at signup. */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.12 }}
+        className="mb-4"
+      >
+        <h3 className="font-display text-lg text-white mb-3">Celebrations</h3>
+        <div className="glass rounded-xl p-4 space-y-3">
+          <div>
+            <label className="font-sans text-xs text-noir-400 block mb-1">Your birthday</label>
+            <input
+              type="date"
+              value={editBirthday}
+              onChange={(e) => setEditBirthday(e.target.value)}
+              className="w-full bg-noir-800 border border-noir-700 rounded-lg px-3 py-2 text-white font-sans text-sm focus:outline-none focus:border-champagne-500"
+            />
+            {!profile?.birthday && (
+              <p className="font-sans text-[11px] text-champagne-500/80 mt-1">
+                Add your birthday so we can celebrate it with you.
+              </p>
+            )}
+          </div>
+
+          {isCouple && (
+            <div>
+              <label className="font-sans text-xs text-noir-400 block mb-1">
+                Anniversary <span className="text-noir-500">(optional)</span>
+              </label>
+              {isPrimaryMember ? (
+                <input
+                  type="date"
+                  value={editAnniversary}
+                  onChange={(e) => setEditAnniversary(e.target.value)}
+                  className="w-full bg-noir-800 border border-noir-700 rounded-lg px-3 py-2 text-white font-sans text-sm focus:outline-none focus:border-champagne-500"
+                />
+              ) : (
+                <p className="font-sans text-sm text-white">
+                  {membership?.anniversary_date
+                    ? format(new Date(membership.anniversary_date + 'T00:00:00'), 'MMMM d')
+                    : 'Not set — your partner can add it.'}
+                </p>
+              )}
+            </div>
+          )}
+
+          <button
+            onClick={saveCelebrations}
+            disabled={savingDates}
+            className="px-4 py-2 rounded-lg bg-champagne-500 text-noir-900 font-sans text-xs font-semibold hover:bg-champagne-400 disabled:opacity-50 transition-colors"
+          >
+            {savingDates ? 'Saving…' : 'Save'}
+          </button>
         </div>
       </motion.div>
 
@@ -433,8 +551,60 @@ export default function Profile() {
         </div>
       </motion.div>
 
-      {/* Gift cards — buy denominations or check a card balance. All
-          transactions handled on Toast's hosted checkout. */}
+      {/* My favorites — wines the member hearted from the menu / member pours. */}
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.22 }}
+        className="mb-4"
+      >
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-display text-lg text-white">Your Favorites</h3>
+          <Link to="/" className="font-sans text-xs text-champagne-500 hover:text-champagne-400">
+            Browse menu
+          </Link>
+        </div>
+        {favoriteWines.length === 0 ? (
+          <div className="glass rounded-xl p-4 text-center">
+            <Wine size={22} className="text-noir-500 mx-auto mb-2" />
+            <p className="font-sans text-xs text-noir-400">
+              Tap the heart on any wine to save it here.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {favoriteWines.map((w) => (
+              <div key={w.id} className="glass rounded-xl p-3 flex items-center gap-3">
+                <Heart size={14} className="text-rose-500 flex-shrink-0" fill="currentColor" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-display text-sm text-white truncate">
+                    {w.name}
+                    {w.is_member_pour && (
+                      <span className="ml-1.5 font-sans text-[10px] uppercase tracking-wider text-champagne-500/80">
+                        pour
+                      </span>
+                    )}
+                  </p>
+                  <p className="font-sans text-xs text-noir-400 truncate">
+                    {[w.producer, w.region, w.vintage || (w.is_member_pour ? 'NV' : null)]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                </div>
+                {w.price_glass != null && (
+                  <span className="font-sans text-sm text-champagne-500 whitespace-nowrap">
+                    ${Number(w.price_glass).toFixed(0)}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </motion.div>
+
+      {/* Gift cards — buy a gift card in ANY amount, or check a card balance.
+          The value is chosen on Toast's hosted checkout (one custom-amount CTA,
+          no fixed denominations — Bocage sells gift cards at any amount). */}
       <motion.div
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
@@ -446,47 +616,33 @@ export default function Profile() {
           <h3 className="font-display text-lg text-white">Gift Cards</h3>
         </div>
         <p className="font-sans text-xs text-noir-400 mb-4">
-          Give the gift of Bocage — delivered by email.
+          Give the gift of Bocage, in any amount — delivered by email. You
+          choose the value at checkout.
         </p>
 
-        {/* Denomination tiles */}
-        <div className="grid grid-cols-3 gap-2 mb-3">
-          {[25, 50, 75, 100, 150, 200].map((amount) => (
-            <a
-              key={amount}
-              href={giftCardUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="py-3 rounded-lg border border-champagne-500/20 bg-noir-800/50 flex items-center justify-center font-display text-base text-gradient-gold active:scale-95 transition-transform"
-            >
-              ${amount}
-            </a>
-          ))}
-        </div>
+        {/* Single custom-amount CTA — no fixed denominations. */}
+        <a
+          href={giftCardUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full flex items-center justify-center gap-1.5 py-3 rounded-lg bg-champagne-500 text-noir-900 font-sans text-sm font-semibold hover:bg-champagne-400 transition-colors"
+        >
+          <Gift size={14} />
+          Buy a gift card — any amount
+          <ExternalLink size={12} />
+        </a>
 
-        {/* Buy + Check Balance row */}
-        <div className="grid grid-cols-2 gap-2">
-          <a
-            href={giftCardUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg bg-champagne-500 text-noir-900 font-sans text-xs font-semibold hover:bg-champagne-400 transition-colors"
-          >
-            <Gift size={13} />
-            Buy
-            <ExternalLink size={11} />
-          </a>
-          <a
-            href={giftCardBalanceUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-1.5 py-2.5 rounded-lg border border-champagne-500/40 text-champagne-500 font-sans text-xs font-semibold hover:bg-champagne-500 hover:text-noir-900 transition-colors"
-          >
-            <CreditCard size={13} />
-            Check Balance
-            <ExternalLink size={11} />
-          </a>
-        </div>
+        {/* Secondary: check the balance of an existing card. */}
+        <a
+          href={giftCardBalanceUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="mt-2 w-full flex items-center justify-center gap-1.5 py-2 text-champagne-500 font-sans text-xs font-semibold hover:underline"
+        >
+          <CreditCard size={13} />
+          Check a card balance
+          <ExternalLink size={11} />
+        </a>
       </motion.div>
 
       {/* Quick links — ordering + reservations */}

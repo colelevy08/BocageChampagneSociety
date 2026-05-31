@@ -3,14 +3,17 @@
  * @description Wine and champagne catalog page for Bocage Champagne Society.
  * Top-level Glass/Bottle tabs with dynamic subcategory filters, search,
  * sort options, grid/list views, skeleton loading, pull-to-refresh, and wine detail modal.
+ * Also surfaces the curated, Society-only "Member Pours" panel and a favorite
+ * (heart) toggle on every wine card, backed by bocage_wine_favorites.
  * @importedBy src/App.jsx (route: /)
  * @imports src/lib/supabase.js, src/components/ui/*, src/components/WineDetailModal.jsx,
- *          src/hooks/useDebounce.js, src/hooks/usePullToRefresh.js, framer-motion, lucide-react
+ *          src/hooks/useDebounce.js, src/hooks/usePullToRefresh.js, src/hooks/useFavorites.js,
+ *          framer-motion, lucide-react
  */
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Star, Wine as WineIcon, Grid3X3, List, X, ArrowUpDown, RefreshCw, GlassWater } from 'lucide-react';
+import { Search, Star, Wine as WineIcon, Grid3X3, List, X, ArrowUpDown, RefreshCw, GlassWater, Heart } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import PageHeader from '../components/ui/PageHeader';
 import EmptyState from '../components/ui/EmptyState';
@@ -19,6 +22,7 @@ import { WineCardSkeleton } from '../components/ui/Skeleton';
 import WineDetailModal from '../components/WineDetailModal';
 import { useDebounce } from '../hooks/useDebounce';
 import { usePullToRefresh } from '../hooks/usePullToRefresh';
+import { useFavorites } from '../hooks/useFavorites';
 
 /** Subcategory filters per service type */
 const GLASS_SUBCATEGORIES = [
@@ -57,6 +61,29 @@ function getPrice(wine, serviceType) {
 }
 
 /**
+ * A heart toggle for favoriting a wine. Overlaid on a wine card; the wrapper
+ * stops click propagation so tapping the heart never opens the detail modal.
+ * @param {{ active: boolean, onClick: (e:Event)=>void }} props
+ * @returns {JSX.Element}
+ */
+function FavoriteHeart({ active, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={active ? 'Remove from favorites' : 'Add to favorites'}
+      aria-pressed={active}
+      className="p-2 rounded-full bg-noir-900/60 backdrop-blur hover:bg-noir-900 transition-colors"
+    >
+      <Heart
+        size={16}
+        className={active ? 'text-rose-500 fill-rose-500' : 'text-noir-300'}
+      />
+    </button>
+  );
+}
+
+/**
  * Menu page — displays the wine/champagne catalog with Glass/Bottle tabs,
  * dynamic subcategory filters, sorting, view modes, and a detail modal.
  *
@@ -72,6 +99,9 @@ export default function Menu() {
   const [sortBy, setSortBy] = useState('featured');
   const [showSort, setShowSort] = useState(false);
   const [selectedWine, setSelectedWine] = useState(null);
+
+  // Member favorites — powers the heart toggles on every card + the pours panel.
+  const { favorites, toggle: toggleFavorite } = useFavorites();
 
   const debouncedSearch = useDebounce(search, 250);
 
@@ -96,6 +126,8 @@ export default function Menu() {
   // Filter + sort wines
   const processed = wines
     .filter((wine) => {
+      // Member pours have their own panel up top — keep them out of La Carte.
+      if (wine.is_member_pour) return false;
       if (wine.service_type !== serviceType) return false;
       const q = debouncedSearch.toLowerCase();
       const matchesSearch = !q ||
@@ -117,6 +149,9 @@ export default function Menu() {
     });
 
   const serviceCount = wines.filter((w) => w.service_type === serviceType).length;
+
+  // Curated, Society-only pours shown in their own panel at the top of the page.
+  const memberPours = wines.filter((w) => w.is_member_pour);
 
   /** Switch service type and reset subcategory */
   function switchService(type) {
@@ -142,6 +177,50 @@ export default function Menu() {
         title="La Carte"
         subtitle={`${serviceCount} selections`}
       />
+
+      {/* Member Pours — curated, Society-only by-the-glass list. Members can
+          favorite these; owners see the aggregate in AdminInventory. */}
+      {memberPours.length > 0 && (
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-2">
+            <GlassWater size={16} className="text-champagne-500" />
+            <h2 className="font-display text-lg text-white">Member Pours</h2>
+            <span className="font-sans text-[11px] uppercase tracking-wider text-champagne-500/80 border border-champagne-500/30 rounded-full px-2 py-0.5">
+              Society only
+            </span>
+          </div>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {memberPours.map((wine) => (
+              <div
+                key={wine.id}
+                role="button"
+                tabIndex={0}
+                onClick={() => setSelectedWine(wine)}
+                onKeyDown={(e) => { if (e.key === 'Enter') setSelectedWine(wine); }}
+                className="relative flex items-center gap-3 glass-gold rounded-2xl p-3 hover-lift cursor-pointer"
+              >
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-display text-base text-white leading-tight truncate">{wine.name}</h3>
+                  <p className="font-sans text-xs text-noir-400 mt-0.5 truncate">
+                    {[wine.producer, wine.region, wine.vintage || 'NV'].filter(Boolean).join(' · ')}
+                  </p>
+                </div>
+                {wine.price_glass != null && (
+                  <span className="text-champagne-500 font-sans text-sm font-medium whitespace-nowrap">
+                    ${Number(wine.price_glass).toFixed(0)}
+                  </span>
+                )}
+                <div onClick={(e) => e.stopPropagation()}>
+                  <FavoriteHeart
+                    active={favorites.has(wine.id)}
+                    onClick={() => toggleFavorite(wine.id)}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Glass / Bottle toggle */}
       <div className="flex bg-noir-800 rounded-xl p-1 mb-4 border border-noir-700">
@@ -286,16 +365,25 @@ export default function Menu() {
 
       {/* Wine cards — list view */}
       {!loading && viewMode === 'list' && (
-        <div className="space-y-3">
+        <div className="space-y-3 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-3">
           {processed.map((wine, index) => (
-            <motion.button
+            <motion.div
               key={wine.id}
               initial={{ opacity: 0, y: 16 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.04, duration: 0.3 }}
               onClick={() => setSelectedWine(wine)}
-              className="w-full text-left glass rounded-2xl overflow-hidden hover-lift"
+              onKeyDown={(e) => { if (e.key === 'Enter') setSelectedWine(wine); }}
+              role="button"
+              tabIndex={0}
+              className="relative w-full text-left glass rounded-2xl overflow-hidden hover-lift cursor-pointer"
             >
+              <div onClick={(e) => e.stopPropagation()} className="absolute top-2 left-2 z-10">
+                <FavoriteHeart
+                  active={favorites.has(wine.id)}
+                  onClick={() => toggleFavorite(wine.id)}
+                />
+              </div>
               <div className="flex">
                 {wine.image_url ? (
                   <img src={wine.image_url} alt={wine.name} className="w-24 h-28 object-cover flex-shrink-0" />
@@ -333,7 +421,7 @@ export default function Menu() {
                   </div>
                 </div>
               </div>
-            </motion.button>
+            </motion.div>
           ))}
         </div>
       )}
@@ -342,14 +430,23 @@ export default function Menu() {
       {!loading && viewMode === 'grid' && (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
           {processed.map((wine, index) => (
-            <motion.button
+            <motion.div
               key={wine.id}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: index * 0.04 }}
               onClick={() => setSelectedWine(wine)}
-              className="text-left glass rounded-xl overflow-hidden hover-lift"
+              onKeyDown={(e) => { if (e.key === 'Enter') setSelectedWine(wine); }}
+              role="button"
+              tabIndex={0}
+              className="relative text-left glass rounded-xl overflow-hidden hover-lift cursor-pointer"
             >
+              <div onClick={(e) => e.stopPropagation()} className="absolute top-2 right-2 z-10">
+                <FavoriteHeart
+                  active={favorites.has(wine.id)}
+                  onClick={() => toggleFavorite(wine.id)}
+                />
+              </div>
               {wine.image_url ? (
                 <img src={wine.image_url} alt={wine.name} className="w-full h-32 object-cover" />
               ) : (
@@ -375,7 +472,7 @@ export default function Menu() {
                   {wine.is_featured && <Star className="text-champagne-500" size={10} fill="currentColor" />}
                 </div>
               </div>
-            </motion.button>
+            </motion.div>
           ))}
         </div>
       )}

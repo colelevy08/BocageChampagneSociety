@@ -39,7 +39,7 @@ export default function Membership() {
   const firstName = (profile?.full_name || '').trim().split(' ')[0];
 
   return (
-    <div className="px-4 pt-6 pb-4">
+    <div className="px-4 pt-6 pb-4 max-w-2xl mx-auto">
       {pullDistance > 0 && (
         <div className="flex justify-center -mt-4 mb-2">
           <RefreshCw size={20} className={`text-champagne-500 ${isRefreshing ? 'animate-spin' : ''}`} />

@@ -389,14 +389,22 @@ export default function AdminCRM() {
     if (!eventForm.title.trim()) { toast.error('Title is required.'); return; }
     setUpdatingId(editingEvent);
 
+    // On a brand-new event, default remaining seats to the max capacity so the
+    // "X seats left" counter works even if the admin left it blank.
+    const maxSeats = eventForm.max_seats === '' ? null : parseInt(eventForm.max_seats, 10);
+    let seatsRemaining = eventForm.seats_remaining === '' ? null : parseInt(eventForm.seats_remaining, 10);
+    if (editingEvent === 'new' && seatsRemaining === null && maxSeats !== null) {
+      seatsRemaining = maxSeats;
+    }
+
     const payload = {
       title: eventForm.title.trim(),
       description: eventForm.description.trim() || null,
       event_date: eventForm.event_date ? new Date(eventForm.event_date).toISOString() : null,
       location: eventForm.location.trim() || null,
       image_url: eventForm.image_url.trim() || null,
-      max_seats: eventForm.max_seats === '' ? null : parseInt(eventForm.max_seats, 10),
-      seats_remaining: eventForm.seats_remaining === '' ? null : parseInt(eventForm.seats_remaining, 10),
+      max_seats: maxSeats,
+      seats_remaining: seatsRemaining,
       price: eventForm.price === '' ? null : parseFloat(eventForm.price),
       is_active: !!eventForm.is_active,
       event_category: eventForm.event_category || 'general',
