@@ -11,7 +11,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, ArrowRight, Sparkles } from 'lucide-react';
-import societyLogo from '../assets/society-logo.jpeg';
+import societyLogo from '../assets/society-logo.png';
 import { useAuth } from '../context/AuthContext';
 import { useSocietyContent } from '../lib/societyContent';
 
@@ -159,10 +159,16 @@ export default function Auth() {
           transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
           className="relative inline-flex items-center justify-center mb-5"
         >
-          {/* Gold glow behind the badge */}
+          {/* Gold glow behind the badge — a wide soft halo plus a brighter core.
+              With the logo's background now transparent, the glow shines through
+              and around the plaque. */}
           <div
             aria-hidden="true"
-            className="absolute inset-0 m-auto w-24 h-24 rounded-full bg-champagne-500/40 blur-2xl"
+            className="absolute inset-0 m-auto w-40 h-40 rounded-full bg-champagne-500/35 blur-3xl"
+          />
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 m-auto w-24 h-24 rounded-full bg-champagne-300/50 blur-2xl"
           />
           <img
             src={societyLogo}
