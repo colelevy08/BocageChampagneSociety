@@ -395,27 +395,22 @@ export default function AdminCRM() {
       acct = data;
     }
 
+    // Atomic credit/debit via the RPC: it inserts the ledger row and moves the
+    // balance in a single transaction (no read-modify-write race against a
+    // concurrent Square top-up or another admin) and enforces the overdraft
+    // guard server-side.
     const delta = creditType === 'debit' ? -amt : amt;
-    const newBalance = Number(acct.balance) + delta;
-    if (newBalance < 0) { toast.error('Insufficient balance for debit.'); setCreditLoading(false); return; }
+    const { error } = await supabase.rpc('bocage_house_account_credit', {
+      p_account_id: acct.id,
+      p_amount: delta,
+      p_type: creditType,
+      p_description: creditNote || (creditType === 'credit' ? 'Account credit' : 'Account debit'),
+      p_created_by: user?.id ?? null,
+    });
 
-    const [balRes, txRes] = await Promise.all([
-      supabase
-        .from('bocage_house_accounts')
-        .update({ balance: newBalance, updated_at: new Date().toISOString() })
-        .eq('id', acct.id),
-      supabase
-        .from('bocage_house_transactions')
-        .insert({
-          account_id: acct.id,
-          amount: amt,
-          type: creditType,
-          description: creditNote || (creditType === 'credit' ? 'Account credit' : 'Account debit'),
-        }),
-    ]);
-
-    if (balRes.error || txRes.error) toast.error('Failed to update account.');
-    else {
+    if (error) {
+      toast.error(/insufficient/i.test(error.message || '') ? 'Insufficient balance for debit.' : 'Failed to update account.');
+    } else {
       toast.success(`$${amt.toFixed(2)} ${creditType} applied.`);
       setCreditAmount(''); setCreditNote('');
       fetchAll();
