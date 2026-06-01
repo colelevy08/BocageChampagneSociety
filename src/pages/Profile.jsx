@@ -136,24 +136,31 @@ export default function Profile() {
 
   /** Saves updated profile fields */
   async function handleSave() {
+    if (!user?.id) {
+      toast.error('You appear to be signed out — please sign in again.');
+      return;
+    }
     setSaving(true);
-    const { error } = await supabase
-      .from('bocage_profiles')
-      .update({
-        full_name: editName.trim(),
-        phone: editPhone.trim() || null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', user.id);
-
-    if (error) {
-      toast.error('Failed to update profile.');
-    } else {
+    try {
+      const { error } = await supabase
+        .from('bocage_profiles')
+        .update({
+          full_name: editName.trim(),
+          phone: editPhone.trim() || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
+      if (error) throw error;
       toast.success('Profile updated!');
       haptics.success();
       setEditing(false);
+    } catch (err) {
+      // Surface the real reason (network / auth / RLS) instead of a generic
+      // message, so a failed save is actually diagnosable.
+      toast.error(err?.message ? `Couldn't save: ${err.message}` : 'Failed to update profile.');
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   }
 
   /** Handles sign out with toast */
