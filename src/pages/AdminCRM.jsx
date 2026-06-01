@@ -132,7 +132,11 @@ export default function AdminCRM() {
 
   // Member edit
   const [editingMember, setEditingMember] = useState(null); // user_id when editing
-  const [memberForm, setMemberForm] = useState({ full_name: '', phone: '', joined_at: '', notes: '', birthday: '', anniversary_date: '', tier: '' });
+  const [memberForm, setMemberForm] = useState({ full_name: '', phone: '', joined_at: '', notes: '', birthday: '', anniversary_date: '', tier: '', email: '' });
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({ email: '', full_name: '' });
+  const [creating, setCreating] = useState(false);
+  const [accountBusy, setAccountBusy] = useState(false);
   const [memberNotes, setMemberNotes] = useState({}); // profile_id → notes string
 
   // House account
@@ -212,6 +216,7 @@ export default function AdminCRM() {
       birthday: m.bocage_profiles?.birthday || '',
       anniversary_date: m.anniversary_date || '',
       tier: m.tier || '',
+      email: m.primary_email || '',
     });
   }
 
@@ -262,6 +267,61 @@ export default function AdminCRM() {
     if (err) toast.error(`Failed to save member: ${err.message}`);
     else { toast.success('Member updated.'); setEditingMember(null); fetchAll(); }
     setUpdatingId(null);
+  }
+
+  // Account actions (create / email change / password reset) need the service
+  // role, so they go through the marketing /api/admin-society endpoint. We
+  // authenticate with the signed-in admin's Supabase session token; the server
+  // validates it and confirms the admin role.
+  const ADMIN_SOCIETY_URL = 'https://bocage.vercel.app/api/admin-society';
+  async function callAdminSociety(action, payload = {}) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+    if (!token) throw new Error('Your session expired — please sign in again.');
+    const res = await fetch(ADMIN_SOCIETY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ action, ...payload }),
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json?.error || `Request failed (${res.status})`);
+    return json;
+  }
+
+  async function handleCreateMember() {
+    const email = createForm.email.trim().toLowerCase();
+    if (!email) { toast.error('Email is required.'); return; }
+    setCreating(true);
+    try {
+      await callAdminSociety('invite', { email, fullName: createForm.full_name.trim() });
+      toast.success('Invite sent — they\'ll get an email to set their password.');
+      setCreateForm({ email: '', full_name: '' });
+      setCreateOpen(false);
+      fetchAll();
+    } catch (e) { toast.error(e.message); }
+    finally { setCreating(false); }
+  }
+
+  async function handleResetPassword(userId, email) {
+    if (!email) { toast.error('No email on file — set the login email first.'); return; }
+    setAccountBusy(true);
+    try {
+      await callAdminSociety('reset', { userId, email });
+      toast.success('Password-reset email sent.');
+    } catch (e) { toast.error(e.message); }
+    finally { setAccountBusy(false); }
+  }
+
+  async function handleChangeEmail(userId, email) {
+    const clean = (email || '').trim().toLowerCase();
+    if (!clean) { toast.error('Enter a login email.'); return; }
+    setAccountBusy(true);
+    try {
+      await callAdminSociety('setemail', { userId, email: clean });
+      toast.success('Login email updated.');
+      fetchAll();
+    } catch (e) { toast.error(e.message); }
+    finally { setAccountBusy(false); }
   }
 
   async function toggleAdmin(profileId, currentRole) {
@@ -723,7 +783,52 @@ export default function AdminCRM() {
             >
               <Download size={12} /> CSV
             </button>
+            <button
+              onClick={() => setCreateOpen((o) => !o)}
+              className="px-3 rounded-lg bg-champagne-500 text-noir-900 font-sans text-xs font-medium whitespace-nowrap"
+              title="Invite a new member"
+            >
+              + New
+            </button>
           </div>
+
+          {createOpen && (
+            <div className="bg-noir-800 rounded-lg p-3 mb-3 space-y-2 border border-champagne-500/20">
+              <p className="font-display text-sm text-white">Invite a new member</p>
+              <input
+                type="email"
+                value={createForm.email}
+                onChange={(e) => setCreateForm((f) => ({ ...f, email: e.target.value }))}
+                placeholder="Email *"
+                className={inputClasses}
+              />
+              <input
+                type="text"
+                value={createForm.full_name}
+                onChange={(e) => setCreateForm((f) => ({ ...f, full_name: e.target.value }))}
+                placeholder="Full name"
+                className={inputClasses}
+              />
+              <div className="flex gap-2">
+                <button
+                  disabled={creating}
+                  onClick={handleCreateMember}
+                  className="flex-1 py-1.5 rounded bg-champagne-500 text-noir-900 font-sans text-xs font-medium disabled:opacity-50"
+                >
+                  {creating ? 'Sending…' : 'Send invite'}
+                </button>
+                <button
+                  onClick={() => setCreateOpen(false)}
+                  className="px-3 py-1.5 rounded bg-noir-700 text-noir-300 font-sans text-xs"
+                >
+                  Cancel
+                </button>
+              </div>
+              <p className="font-sans text-[11px] text-noir-500">
+                They&apos;ll get a branded email to set their password. Set tier/birthday after they appear below.
+              </p>
+            </div>
+          )}
           <p className="text-xs font-sans text-noir-500 mb-3">{filteredMembers.length} members</p>
 
           {loading && <div className="space-y-2">{[...Array(5)].map((_, i) => <div key={i} className="h-16 skeleton rounded-xl" />)}</div>}
@@ -897,6 +1002,36 @@ export default function AdminCRM() {
                                   className="px-3 py-1.5 rounded bg-noir-700 text-noir-300 font-sans text-xs"
                                 >
                                   Cancel
+                                </button>
+                              </div>
+                              {/* Account actions — login email + password reset
+                                  go through the service-role admin-society
+                                  endpoint (authenticated with the admin session). */}
+                              <div className="border-t border-noir-700 pt-2 mt-2 space-y-2">
+                                <Field label="Login email">
+                                  <div className="flex gap-2">
+                                    <input
+                                      type="email"
+                                      value={memberForm.email}
+                                      onChange={(e) => setMemberForm((f) => ({ ...f, email: e.target.value }))}
+                                      placeholder="member@example.com"
+                                      className={inputClasses}
+                                    />
+                                    <button
+                                      disabled={accountBusy}
+                                      onClick={() => handleChangeEmail(m.user_id, memberForm.email)}
+                                      className="px-3 rounded bg-noir-700 text-noir-200 font-sans text-xs whitespace-nowrap disabled:opacity-50"
+                                    >
+                                      Update
+                                    </button>
+                                  </div>
+                                </Field>
+                                <button
+                                  disabled={accountBusy || !m.primary_email}
+                                  onClick={() => handleResetPassword(m.user_id, m.primary_email)}
+                                  className="w-full py-1.5 rounded border border-champagne-500/40 text-champagne-400 font-sans text-xs disabled:opacity-40"
+                                >
+                                  Send password-reset email
                                 </button>
                               </div>
                               <button
