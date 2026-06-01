@@ -25,29 +25,54 @@ experience).
 ## Why it's blocked
 
 Toast house accounts are real and are searchable **in the Toast POS UI** by
-guest name, email, phone, or customer number. However:
+guest name, email, phone, or customer number. But that's a POS-UI feature, not
+an API one.
 
-- Toast's machine-client API surface (Menus / Orders / Labor / Config) does
-  **not** expose a documented "read house-account balance" or "look up house
-  account by guest contact" endpoint for general integrations.
-- House-account read access appears to require **Toast partner-tier access** and
-  specific scopes granted to the integration, if it's offered at all.
+**Confirmed via Toast's developer docs (May 2026):** across *every* documented
+machine-client API module — Analytics (`era`), Cash Management (`cashmgmt`),
+Configuration (`config`), Credit Cards (`ccpartner`), Gift Cards, Kitchen,
+Labor (`labor`), Loyalty, Menus (`menus`), Orders (`orders`), Order Management
+Config, Packaging, Partners (`partners`), Restaurant Availability, Restaurants
+(`restaurants`), Stock, Tender — **none exposes**:
 
-Until we confirm our Toast app is permitted to read house-account data, there's
-no safe endpoint to call.
+- a "read house-account balance" endpoint, or
+- a "look up guest/customer by email, phone, or name" endpoint.
 
-## What to do to unblock (action items)
+The "Pay a house account balance" and "Lookup Customer" flows are documented
+**only** as POS-UI procedures (`platformPayHouseAccountBalance.html`), with no
+REST contract. So this is **not** a missing-scope problem a partner upgrade
+trivially fixes — there is no documented endpoint to call at all.
 
-1. **Confirm Toast scope.** Log in to the Toast partner/integration portal (or
-   contact the Toast integrations team) and verify whether the existing Bocage
-   Toast app (the one behind `TOAST_CLIENT_ID`) can be granted **house account
-   read** access, and which API module/endpoint exposes:
-   - guest/customer lookup by email, phone, or name, and
-   - the house-account outstanding balance for that guest.
-2. **Get the endpoint contract.** Capture the exact request/response shape +
-   required scopes for those endpoints.
-3. Hand that back here and the implementation below can be built and tested on a
-   Vercel preview.
+Sources:
+- API overview / module list — https://doc.toasttab.com/doc/devguide/apiOverview.html
+- Paying a house account balance (POS-UI only) — https://doc.toasttab.com/doc/platformguide/platformPayHouseAccountBalance.html
+- API reference portal — https://toastintegrations.redoc.ly/
+
+## Three ways forward (owner decision required)
+
+**Option A — Ask Toast for a custom/partner data feed.** Email the Toast
+integrations team (via the partner portal) and ask directly: "Is there any
+API — including partner-tier or beta — to read a guest's outstanding
+house-account balance and look them up by email/phone/name?" If yes, capture the
+endpoint contract + scopes and the "Planned implementation" below gets built.
+Cost: a back-and-forth with Toast; uncertain outcome. This is the only path to a
+*real-time, authoritative* Toast balance in the app.
+
+**Option B — Reconstruct the balance from the Orders API.** The `orders` module
+*is* readable. We could pull a member's checks and sum the payments tendered to
+their house account to approximate a running balance. Honest caveats: this is
+**money-adjacent and imperfect** — it misses invoiced/manual POS adjustments and
+credits applied outside the order flow, requires matching Toast guest identity to
+the Society profile (no contact-lookup endpoint, so matching is heuristic), and
+reading full order history is heavy. Would need explicit owner sign-off before
+building, and must be labeled in-app as an estimate, not the authoritative
+balance.
+
+**Option C — Keep them separate (status quo, recommended near-term).** The app's
+Square-funded prepaid house account (`bocage_house_accounts`) already works
+end-to-end. Leave it as the in-app balance and treat the Toast bar tab as a
+separate, in-person thing. Zero risk, zero Toast dependency. Revisit if Option A
+turns up a real endpoint.
 
 ## Planned implementation (once unblocked)
 
