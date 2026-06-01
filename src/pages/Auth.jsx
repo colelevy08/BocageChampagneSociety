@@ -82,13 +82,17 @@ export default function Auth() {
     }
   }, []);
 
-  // Cycle taglines
-  useState(() => {
+  // Cycle taglines. Must be useEffect, not useState — useState(fn) runs fn once
+  // as a lazy initializer and stores its return value as state, so the cleanup
+  // never fires and the interval leaks on every mount. useEffect also re-binds
+  // when the (admin-editable) tagline list changes so edits actually rotate.
+  useEffect(() => {
+    if (TAGLINES.length === 0) return undefined;
     const interval = setInterval(() => {
       setTaglineIndex((prev) => (prev + 1) % TAGLINES.length);
     }, 3000);
     return () => clearInterval(interval);
-  });
+  }, [TAGLINES.length]);
 
   /**
    * Handles form submission for login, signup, and forgot password.
