@@ -290,10 +290,12 @@ export default function AdminCRM() {
 
   async function handleCreateMember() {
     const email = createForm.email.trim().toLowerCase();
+    const fullName = createForm.full_name.trim();
     if (!email) { toast.error('Email is required.'); return; }
+    if (!fullName) { toast.error('Full name is required.'); return; }
     setCreating(true);
     try {
-      await callAdminSociety('invite', { email, fullName: createForm.full_name.trim() });
+      await callAdminSociety('invite', { email, fullName });
       toast.success('Invite sent — they\'ll get an email to set their password.');
       setCreateForm({ email: '', full_name: '' });
       setCreateOpen(false);
@@ -806,7 +808,7 @@ export default function AdminCRM() {
                 type="text"
                 value={createForm.full_name}
                 onChange={(e) => setCreateForm((f) => ({ ...f, full_name: e.target.value }))}
-                placeholder="Full name"
+                placeholder="Full name *"
                 className={inputClasses}
               />
               <div className="flex gap-2">
