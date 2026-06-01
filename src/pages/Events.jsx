@@ -76,22 +76,21 @@ export default function Events() {
     setBookingId(eventId);
     haptics.medium();
 
-    const { error } = await supabase
-      .from('bocage_event_bookings')
-      .insert({ user_id: user.id, event_id: eventId });
+    // RSVP through the atomic RPC: it books the seat and decrements
+    // seats_remaining in one transaction (members can't UPDATE bocage_events
+    // directly — RLS only allows admins — so a client-side decrement silently
+    // did nothing and could oversell).
+    const { data, error } = await supabase.rpc('bocage_event_rsvp', { p_event_id: eventId });
 
-    if (error) {
+    if (error || !data) {
       toast.error('Booking failed. Please try again.');
       haptics.error();
+    } else if (data.status === 'full') {
+      toast.error('This event is fully booked.');
+      haptics.error();
     } else {
-      const event = events.find((e) => e.id === eventId);
-      if (event?.seats_remaining) {
-        await supabase.from('bocage_events')
-          .update({ seats_remaining: event.seats_remaining - 1 })
-          .eq('id', eventId);
-      }
-      setBookings([...bookings, eventId]);
-      toast.success('You\'re in! See you there.');
+      setBookings((prev) => (prev.includes(eventId) ? prev : [...prev, eventId]));
+      toast.success(data.status === 'already' ? "You're already on the list." : "You're in! See you there.");
       haptics.success();
       fetchData();
     }
@@ -108,15 +107,12 @@ export default function Events() {
   // Keep events visible through the END of their day (not just until the start
   // time), so an event with no set end time doesn't vanish the moment it begins.
   const upcomingEvents = events.filter((e) => !isPast(endOfDay(new Date(e.event_date))));
-  const filtered = upcomingEvents.filter((event) => {
-    if (filter === 'free') return !event.price || Number(event.price) === 0;
-    if (filter === 'paid') return event.price && Number(event.price) > 0;
-    // Category filters match the event_category column directly.
-    if (filter === 'member_pour' || filter === 'celebrity_dinner' || filter === 'private_event' || filter === 'wine_dinner') {
-      return event.event_category === filter;
-    }
-    return true;
-  });
+  // 'upcoming' = all; every other chip key matches the event_category column.
+  // (Keeps the filter logic in lockstep with CATEGORY_FILTERS — no dead
+  // free/paid branches that no chip can reach.)
+  const filtered = upcomingEvents.filter(
+    (event) => filter === 'upcoming' || event.event_category === filter,
+  );
 
   const bookedCount = upcomingEvents.filter((e) => bookings.includes(e.id)).length;
 

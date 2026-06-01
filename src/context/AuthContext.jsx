@@ -59,32 +59,38 @@ export function AuthProvider({ children }) {
    */
   async function fetchUserData(userId) {
     try {
-      // Fetch profile
-      const { data: profileData } = await supabase
+      // Fetch profile. maybeSingle() (not single()) so zero rows returns null
+      // instead of throwing. Only overwrite profile state on a successful read —
+      // a transient network/RLS error must not blank out a valid admin's
+      // profile, which would hide the admin tabs/CRM until the next auth event.
+      const { data: profileData, error: profileError } = await supabase
         .from('bocage_profiles')
         .select('*')
         .eq('id', userId)
-        .single();
-      setProfile(profileData);
+        .maybeSingle();
+      if (!profileError && profileData) setProfile(profileData);
 
       // Fetch membership row. The logged-in user could be either the primary
       // buyer (membership.user_id = me) OR the partner on a couples-tier
       // (membership.partner_user_id = me). One row covers both cases for a
       // couple — we want the partner to see the same tier/credit info that
       // their primary partner sees.
-      const { data: memberships } = await supabase
+      const { data: memberships, error: membershipError } = await supabase
         .from('bocage_memberships')
         .select('*')
         .or(`user_id.eq.${userId},partner_user_id.eq.${userId}`);
-      // Prefer rows with tier info (real purchases) over the auto-created
-      // default rows from legacy admin invites.
-      const ranked = (memberships || []).slice().sort((a, b) => {
-        const at = a.tier ? 1 : 0;
-        const bt = b.tier ? 1 : 0;
-        if (at !== bt) return bt - at;
-        return new Date(b.joined_at || 0) - new Date(a.joined_at || 0);
-      });
-      setMembership(ranked[0] || null);
+      // Same guard: don't clobber a good membership on a transient read error.
+      if (!membershipError) {
+        // Prefer rows with tier info (real purchases) over the auto-created
+        // default rows from legacy admin invites.
+        const ranked = (memberships || []).slice().sort((a, b) => {
+          const at = a.tier ? 1 : 0;
+          const bt = b.tier ? 1 : 0;
+          if (at !== bt) return bt - at;
+          return new Date(b.joined_at || 0) - new Date(a.joined_at || 0);
+        });
+        setMembership(ranked[0] || null);
+      }
     } catch (error) {
       console.error('Error fetching user data:', error);
     }
