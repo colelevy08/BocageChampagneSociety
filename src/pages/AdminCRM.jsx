@@ -132,7 +132,7 @@ export default function AdminCRM() {
 
   // Member edit
   const [editingMember, setEditingMember] = useState(null); // user_id when editing
-  const [memberForm, setMemberForm] = useState({ full_name: '', phone: '', joined_at: '', notes: '' });
+  const [memberForm, setMemberForm] = useState({ full_name: '', phone: '', joined_at: '', notes: '', birthday: '', anniversary_date: '', tier: '' });
   const [memberNotes, setMemberNotes] = useState({}); // profile_id → notes string
 
   // House account
@@ -155,7 +155,7 @@ export default function AdminCRM() {
     const [membersRes, eventsRes, eventBookingsRes, atHomeRes, acctsRes, notesRes] = await Promise.all([
       supabase
         .from('bocage_memberships')
-        .select(`*, bocage_profiles ( id, full_name, phone, role, created_at )`)
+        .select(`*, bocage_profiles ( id, full_name, phone, role, created_at, birthday )`)
         .order('joined_at', { ascending: false }),
       supabase
         .from('bocage_events')
@@ -209,6 +209,9 @@ export default function AdminCRM() {
       phone: m.bocage_profiles?.phone || '',
       joined_at: toDateInput(m.joined_at),
       notes: memberNotes[m.user_id] || '',
+      birthday: m.bocage_profiles?.birthday || '',
+      anniversary_date: m.anniversary_date || '',
+      tier: m.tier || '',
     });
   }
 
@@ -221,20 +224,23 @@ export default function AdminCRM() {
         .update({
           full_name: memberForm.full_name.trim(),
           phone: memberForm.phone.trim() || null,
+          birthday: memberForm.birthday || null,
           updated_at: new Date().toISOString(),
         })
         .eq('id', profileId),
     ];
 
-    if (membershipId && memberForm.joined_at) {
+    if (membershipId) {
+      // joined_at, anniversary_date, and tier are all admin-editable on the
+      // membership row. Empty anniversary clears it; tier only changes if set.
+      const membershipPatch = { updated_at: new Date().toISOString() };
+      if (memberForm.joined_at) {
+        membershipPatch.joined_at = new Date(memberForm.joined_at + 'T12:00:00').toISOString();
+      }
+      membershipPatch.anniversary_date = memberForm.anniversary_date || null;
+      if (memberForm.tier) membershipPatch.tier = memberForm.tier;
       promises.push(
-        supabase
-          .from('bocage_memberships')
-          .update({
-            joined_at: new Date(memberForm.joined_at + 'T12:00:00').toISOString(),
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', membershipId),
+        supabase.from('bocage_memberships').update(membershipPatch).eq('id', membershipId),
       );
     }
 
@@ -839,6 +845,33 @@ export default function AdminCRM() {
                                   type="date"
                                   value={memberForm.joined_at}
                                   onChange={(e) => setMemberForm(f => ({ ...f, joined_at: e.target.value }))}
+                                  className={inputClasses}
+                                />
+                              </Field>
+                              <Field label="Birthday">
+                                <input
+                                  type="date"
+                                  value={memberForm.birthday}
+                                  onChange={(e) => setMemberForm(f => ({ ...f, birthday: e.target.value }))}
+                                  className={inputClasses}
+                                />
+                              </Field>
+                              <Field label="Tier">
+                                <select
+                                  value={memberForm.tier}
+                                  onChange={(e) => setMemberForm(f => ({ ...f, tier: e.target.value }))}
+                                  className={inputClasses}
+                                >
+                                  <option value="">— none —</option>
+                                  <option value="individual">Individual</option>
+                                  <option value="couple">Couple</option>
+                                </select>
+                              </Field>
+                              <Field label="Anniversary (couples)">
+                                <input
+                                  type="date"
+                                  value={memberForm.anniversary_date}
+                                  onChange={(e) => setMemberForm(f => ({ ...f, anniversary_date: e.target.value }))}
                                   className={inputClasses}
                                 />
                               </Field>
