@@ -5,10 +5,12 @@
 used on their Society account, so the balance shown in the app reflects what's
 actually owed/credited at the bar.
 
-**Status: BLOCKED on Toast API access — not yet implemented.** This document
-captures why and exactly what's needed to finish it. No guessed/undocumented
-Toast calls have been added to the app (that would risk the live member
-experience).
+**Status: CLOSED — Option C chosen (2026-06-01).** There is no Toast API to read
+house-account balances (see below), so the owner decision is to keep the app's
+Square-funded prepaid house account as the in-app balance and treat the Toast
+bar tab as a separate, in-person concern. No Toast house-account code was added.
+Re-open this doc only if Toast later confirms a real balance-read endpoint
+(Option A) or the Orders-reconstruction tradeoffs (Option B) become worth it.
 
 ---
 
