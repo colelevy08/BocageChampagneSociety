@@ -14,6 +14,7 @@ import { Eye, EyeOff, ArrowRight, Sparkles } from 'lucide-react';
 import societyLogo from '../assets/society-logo.png';
 import { useAuth } from '../context/AuthContext';
 import { useSocietyContent } from '../lib/societyContent';
+import { MARKETING_ORIGIN } from '../lib/urls';
 
 /**
  * Auth page component — handles login, signup, and forgot password flows.
@@ -36,12 +37,10 @@ import { useSocietyContent } from '../lib/societyContent';
 // In both cases this Auth screen is what the magic link drops the new
 // member on after they set their password — i.e. it's a *login* surface
 // for established members, not a self-signup surface.
-// Direct .vercel.app URL while bocagechampagnebar.com's SSL is still being
-// repaired upstream — GoDaddy's domain-forwarding redirect drops the path,
-// so https://www.bocagechampagnebar.com/society would land on the homepage
-// instead of the membership page. Swap back to the canonical apex once
-// Vercel staff clears the edge SSL binding (open ticket re: ghost binding).
-const MEMBERSHIP_URL = 'https://bocage.vercel.app/society';
+// Membership sales page on the real domain — served by the marketing SPA at
+// /society (deeper /society/* paths reverse-proxy to this Society app). The
+// origin is env-overridable via VITE_MARKETING_ORIGIN (see lib/urls.js).
+const MEMBERSHIP_URL = `${MARKETING_ORIGIN}/society`;
 const INQUIRE_EMAIL = 'clark@bocagechampagnebar.com';
 const INQUIRE_SUBJECT = 'Bocage Champagne Society — Question';
 
@@ -51,7 +50,7 @@ const INQUIRE_SUBJECT = 'Bocage Champagne Society — Question';
 // Absolute URL because Society can be reached at either
 // bocage-champagne-society.vercel.app or bocagechampagnebar.com/society —
 // the bocage main repo serves the same .vercel.app URL either way.
-const PASSWORD_RESET_URL = 'https://bocage.vercel.app/api/society-request-password-reset';
+const PASSWORD_RESET_URL = `${MARKETING_ORIGIN}/api/society-request-password-reset`;
 
 export default function Auth() {
   const { signIn } = useAuth();

@@ -23,6 +23,7 @@ import {
 import { format } from 'date-fns';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import { MARKETING_ORIGIN } from '../lib/urls';
 import { useToast } from '../components/ui/Toast';
 import PageHeader from '../components/ui/PageHeader';
 import Badge from '../components/ui/Badge';
@@ -273,7 +274,7 @@ export default function AdminCRM() {
   // role, so they go through the marketing /api/admin-society endpoint. We
   // authenticate with the signed-in admin's Supabase session token; the server
   // validates it and confirms the admin role.
-  const ADMIN_SOCIETY_URL = 'https://bocage.vercel.app/api/admin-society';
+  const ADMIN_SOCIETY_URL = `${MARKETING_ORIGIN}/api/admin-society`;
   async function callAdminSociety(action, payload = {}) {
     const { data: { session } } = await supabase.auth.getSession();
     const token = session?.access_token;
