@@ -518,10 +518,13 @@ export default function AdminCRM() {
 
   async function updateRsvpStatus(rsvpId, status) {
     setUpdatingId(rsvpId);
-    const { error } = await supabase
-      .from('bocage_event_bookings')
-      .update({ status })
-      .eq('id', rsvpId);
+    // RPC updates the booking AND restores/reclaims the event seat atomically.
+    // (Members have no UPDATE on bocage_events, so the seat count could never be
+    // fixed client-side — which is why cancellations used to leak seats forever.)
+    const { error } = await supabase.rpc('bocage_admin_set_rsvp_status', {
+      p_booking_id: rsvpId,
+      p_status: status,
+    });
     if (error) toast.error('Failed to update RSVP.');
     else { toast.success(`RSVP marked ${status}.`); fetchAll(); }
     setUpdatingId(null);
@@ -532,10 +535,8 @@ export default function AdminCRM() {
     const event = rsvp.bocage_events?.title || 'this event';
     if (!confirm(`Remove ${member}'s RSVP for ${event}?`)) return;
     setUpdatingId(rsvp.id);
-    const { error } = await supabase
-      .from('bocage_event_bookings')
-      .delete()
-      .eq('id', rsvp.id);
+    // RPC deletes the booking AND frees the event seat atomically.
+    const { error } = await supabase.rpc('bocage_admin_delete_rsvp', { p_booking_id: rsvp.id });
     if (error) toast.error(`Delete failed: ${error.message}`);
     else { toast.success('RSVP removed.'); fetchAll(); }
     setUpdatingId(null);
