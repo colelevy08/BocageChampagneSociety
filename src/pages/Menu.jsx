@@ -13,7 +13,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Star, Wine as WineIcon, Grid3X3, List, X, ArrowUpDown, RefreshCw, GlassWater, Heart } from 'lucide-react';
+import { Search, Star, Wine as WineIcon, Grid3X3, List, X, ArrowUpDown, RefreshCw, GlassWater, Heart, Download } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import PageHeader from '../components/ui/PageHeader';
 import EmptyState from '../components/ui/EmptyState';
@@ -177,6 +177,16 @@ export default function Menu() {
         title="La Carte"
         subtitle={`${serviceCount} selections`}
       />
+
+      {/* Printable menu — the full La Carte as a downloadable 5x7 PDF card. */}
+      <a
+        href="/bocage_society_menu_5x7.pdf"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center justify-center gap-2 mb-6 py-2.5 px-4 rounded-xl border border-champagne-500/40 text-champagne-400 hover:bg-champagne-500/10 transition-colors font-sans text-sm font-medium"
+      >
+        <Download size={15} /> View &amp; Download Menu (PDF)
+      </a>
 
       {/* Member Pours — curated, Society-only by-the-glass list. Members can
           favorite these; owners see the aggregate in AdminInventory. */}
