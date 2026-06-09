@@ -19,6 +19,7 @@ import {
   Clock, Check, X, Package, Wallet, Plus, Minus,
   Edit3, Trash2, Save, Shield, ShieldOff, MapPin, Image, Eye, EyeOff,
   FileText, ArrowUp, ArrowDown, MessageSquare, HelpCircle, Sparkles, Download, StickyNote,
+  Wine,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { supabase } from '../lib/supabase';
@@ -28,6 +29,7 @@ import { useToast } from '../components/ui/Toast';
 import PageHeader from '../components/ui/PageHeader';
 import Badge from '../components/ui/Badge';
 import EmptyState from '../components/ui/EmptyState';
+import CellarIntakeAdmin from '../components/CellarIntakeAdmin';
 import {
   useSocietyContent, saveSocietyContent, ICON_NAMES, iconForName, TIER_COLORS,
   EDITABLE_TAB_ROUTES, DEFAULT_TAB_LABELS,
@@ -92,7 +94,7 @@ export default function AdminCRM() {
   const { isAdmin, user } = useAuth();
   const toast = useToast();
 
-  const [tab, setTab] = useState('members'); // 'members' | 'events' | 'athome' | 'content'
+  const [tab, setTab] = useState('members'); // 'members' | 'events' | 'athome' | 'cellar' | 'content'
   const [eventsTab, setEventsTab] = useState('manage'); // 'manage' | 'bookings'
   const [contentTab, setContentTab] = useState('benefits'); // 'benefits' | 'testimonials' | 'faqs' | 'tiers' | 'branding'
 
@@ -743,6 +745,7 @@ export default function AdminCRM() {
           { key: 'members', label: 'Members', icon: Users    },
           { key: 'events',  label: 'Events',  icon: Calendar },
           { key: 'athome',  label: 'At-Home', icon: Home     },
+          { key: 'cellar',  label: 'Cellar',  icon: Wine     },
           { key: 'content', label: 'Content', icon: FileText },
         ].map(({ key, label, icon: Icon }) => (
           <button
@@ -1628,6 +1631,11 @@ export default function AdminCRM() {
           })}
         </div>
       )}
+
+      {/* ─────────────────── CELLAR TAB ─────────────────── */}
+      {/* Private Cellar Curation questionnaire submissions — self-contained
+          component (fetches its own data from bocage_cellar_intake). */}
+      {tab === 'cellar' && <CellarIntakeAdmin />}
 
       {/* ─────────────────── CONTENT TAB ─────────────────── */}
       {tab === 'content' && (
